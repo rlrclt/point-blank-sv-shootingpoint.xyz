@@ -1890,6 +1890,61 @@
   };
   window.__pbScanRecoil = scanEngine;
 
+  /* ───── what is actually readable in a live match ─────
+     The HUD line shows rec 0.00 while the gun still climbs, so *something* is
+     readable but it is not the value the camera uses. Walk the globals that
+     could hold game state and report every object carrying recoil-ish numeric
+     fields, plus the camera objects, so the next step is based on measurement
+     instead of a guess. Runs on demand: __pbProbe() in the console. */
+  const probeState = () => {
+    const out = { globals: [], recoilish: [], cameras: [], keys: 0 };
+    const seen = new Set();
+    const interesting = (obj) => {
+      const r = [];
+      for (const k in obj) {
+        if (!/recoil|kick|pitch|yaw|spread|dev|hPend|vRt/i.test(k)) continue;
+        const v = obj[k];
+        if (typeof v === "number") r.push([k, +v.toFixed(4)]);
+      }
+      return r;
+    };
+    const walk = (obj, path, depth) => {
+      if (!obj || typeof obj !== "object" || depth > 3 || seen.has(obj)) return;
+      seen.add(obj);
+      const hits = interesting(obj);
+      if (hits.length) out.recoilish.push({ path, hits });
+      if (obj.isCamera && obj.isCamera === true) out.cameras.push(path);
+      if (depth < 3) {
+        let n = 0;
+        for (const k in obj) {
+          if (n++ > 40) break;
+          let v;
+          try { v = obj[k]; } catch (_) { continue; }
+          if (v && typeof v === "object") walk(v, path + "." + k, depth + 1);
+        }
+      }
+    };
+    try {
+      for (const k in window) {
+        out.keys++;
+        if (!/pb|game|player|weapon|char|battle|engine|scene|world|match/i.test(k)) continue;
+        let v;
+        try { v = window[k]; } catch (_) { continue; }
+        if (!v || typeof v !== "object") continue;
+        out.globals.push(k);
+        walk(v, k, 0);
+      }
+    } catch (_) {}
+    try { console.log("[PB] probe", out); } catch (_) {}
+    try {
+      const first = out.recoilish.slice(0, 3).map(x => x.path).join(", ");
+      setStatus("probe: globals " + (out.globals.join("/") || "–") +
+        " | recoil-ish " + out.recoilish.length + (first ? " (" + first + ")" : ""));
+    } catch (_) {}
+    return out;
+  };
+  window.__pbProbe = probeState;
+
   let synced = false;          // เอาหลัก = วาดใน render hook ของเกม | ไม่ใช่ = โหมดรอแล้วใช้ rAF เอง
   let _lastHookFrame = -1;
   function setMode(on) {
