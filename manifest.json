@@ -1,0 +1,28 @@
+{
+    "manifest_version": 3,
+    "name": "PB ESP - TH",
+    "version": "1.0.0",
+    "action": {
+        "default_title": "PB ESP - TH"
+    },
+    "description": "PB Mobile extension with ESP overlay, no-recoil, aim assist, and mobile bypass",
+    "content_scripts": [
+        {
+            "matches": ["*://*.pbmobile-th.online/*"],
+            "js": ["mobile-spoof.js"],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": ["*://*.pbmobile-th.online/*"],
+            "js": ["injector.js"],
+            "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["esp.js"],
+            "matches": ["*://*.pbmobile-th.online/*"]
+        }
+    ]
+}

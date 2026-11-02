@@ -1,0 +1,17 @@
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Extension packaging output
+*.zip
+dist/
+
+# JavaScript tooling
+node_modules/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
