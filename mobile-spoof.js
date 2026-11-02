@@ -4,6 +4,32 @@
 (() => {
   "use strict";
 
+  /* ───── 0. gate ─────────────────────────────────────────────────────
+     The spoof runs at document_start, before any UI exists, so the checkbox in
+     esp.js can only reach it through storage. Without this gate the spoof was
+     unconditional: unticking "ปลอมเป็น Mobile" did nothing at all, because the
+     UA/DPR/matchMedia overrides were already applied and nothing could undo
+     them. Turning it off therefore also has to undo the two things that keep
+     the client in phone mode on its own: the ?touch=1 parameter and the
+     remembered peripheral. */
+  let spoofOn = true;
+  try { if (localStorage.getItem("pbFakeMobile") === "0") spoofOn = false; } catch (_) {}
+
+  if (!spoofOn) {
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.get("touch") === "1" &&
+          sessionStorage.getItem("pbMobileOff") !== "1") {
+        sessionStorage.setItem("pbMobileOff", "1");
+        u.searchParams.delete("touch");
+        location.replace(u.toString());
+      }
+    } catch (_) {}
+    try { localStorage.setItem("pbweb_periph", "pc"); } catch (_) {}
+    try { window.__pbMobileSpoofActive = false; } catch (_) {}
+    return;                          /* no spoof: leave the client as a PC */
+  }
+
   /* ───── 1. Navigator spoofs (ต้องทำก่อนเกมอ่าน UA) ───── */
   const FAKE_UA = "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 

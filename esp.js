@@ -21,7 +21,11 @@
     skeletonColor: "~", // "~" = ใช้ enemyColor (แดง) หรือ allyColor (เขียว) ตาม default
     //                 ใส่รหัสสี Hex เช่น "#ffaa00" เพื่อกำหนดเอง
     //                 ใส่ "random" เพื่อให้สีเปลี่ยนทุกเฟรม (สำหรับ debug)
-    fakeMobile: true, // Bypass ตรวจจับ PC / ปลดล็อคห้องเฉพาะ Mobile
+    /* the checkbox has to show what was actually stored, otherwise it lies after
+       a reload (it would tick itself back on while the spoof stays off) */
+    fakeMobile: (function () {
+      try { return localStorage.getItem("pbFakeMobile") !== "0"; } catch (_) { return true; }
+    })(), // Bypass ตรวจจับ PC / ปลดล็อคห้องเฉพาะ Mobile
     // Humanization
     humanize: false,
     humanPitchAmp: 0.55,
@@ -290,7 +294,20 @@
   for (const c of panel.querySelectorAll("input[type=checkbox]")) {
     const key = c.dataset.c;
     c.checked = CFG[key];
-    c.addEventListener("change", () => { CFG[key] = c.checked; saveCfg(); });
+    c.addEventListener("change", () => {
+      CFG[key] = c.checked;
+      saveCfg();
+      /* The mobile spoof is applied by mobile-spoof.js before this UI exists, so
+         the choice has to be written to storage and the page reloaded for it to
+         take effect — that is the only way to make the client re-initialise as a
+         PC (or as a phone) from scratch. */
+      if (key === "fakeMobile") {
+        try { localStorage.setItem("pbFakeMobile", c.checked ? "1" : "0"); } catch (_) {}
+        try { sessionStorage.removeItem("pbMobileOff"); } catch (_) {}
+        try { setStatus(c.checked ? "เปิด mobile — กำลังรีโหลด..." : "ปิด mobile — กำลังรีโหลด..."); } catch (_) {}
+        setTimeout(() => { try { location.reload(); } catch (_) {} }, 400);
+      }
+    });
   }
   // ผูก sliders
   const fovSlider = panel.querySelector("#pbFovSlider");
