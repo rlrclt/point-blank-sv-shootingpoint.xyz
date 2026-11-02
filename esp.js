@@ -1945,6 +1945,7 @@
   };
   window.__pbProbe = probeState;
 
+  let CAM_PITCH = 0, CAM_AT = 0;
   let synced = false;          // เอาหลัก = วาดใน render hook ของเกม | ไม่ใช่ = โหมดรอแล้วใช้ rAF เอง
   let _lastHookFrame = -1;
   function setMode(on) {
@@ -1954,6 +1955,15 @@
   }
 
   function drawOnce(scene, camera) {
+    /* the camera is the one piece of game state we always get, because the
+       render hook hands it to us. Its pitch is exactly what recoil moves, so it
+       is the measurement that makes a closed loop possible. */
+    if (camera) {
+      try {
+        CAM_PITCH = camera.rotation ? camera.rotation.x : (CAM_PITCH || 0);
+        CAM_AT = performance.now();
+      } catch (_) {}
+    }
     const pb = window.__pb;
     if (pb) {
       // เกมเรียก render หลาย pass ต่อเฟรม — hook พวกนี้ต้องรันครั้งเดียว
@@ -2271,26 +2281,64 @@
   addEventListener("mouseup", (e) => { if (e.button === 0) mouseDown1 = false; }, true);
   addEventListener("blur", () => { mouseDown1 = false; }, true);
 
+  /* ───── closed loop ─────
+     A fixed pump can only guess: the kick depends on the weapon, the stance and
+     the sensitivity. The camera pitch is measurable though — the render hook
+     hands us the camera every frame — so hold the pitch at the value it had
+     when the trigger went down: measure how far it climbed, convert that into
+     mouse pixels with a gain we learn on the fly, and push back down. If the
+     gain never changes the pitch, the game is ignoring synthetic events; that is
+     reported instead of pretending it works. */
+  let AIM_PITCH = 0, engaged = false, gain = 0.35;   // px per radian, learned
+  let lastErr = 0, useless = 0, ticks = 0;
+  const pushDown = (px) => {
+    try {
+      document.dispatchEvent(new MouseEvent("mousemove", {
+        movementX: 0, movementY: px, bubbles: true, cancelable: false
+      }));
+    } catch (_) {}
+  };
   const compTick = () => {
     requestAnimationFrame(compTick);
     const row = panel.querySelector("#pbCompRow");
-    if (row) row.style.display = (CFG.noRecoil && clientKind() === "esm") ? "block" : "none";
-    if (!CFG.noRecoil) return;
-    if (clientKind() !== "esm") return;
-    const px = CFG.nrComp || 0;
-    if (px <= 0) return;
-    if (!mouseDown1) return;                       /* only while firing */
-    const now = performance.now();
-    if (now - compAcc < 70) return;                /* ~14 ticks/s, matches auto fire */
-    compAcc = now;
-    try {
-      document.dispatchEvent(new MouseEvent("mousemove", {
-        movementX: 0,
-        movementY: px,
-        bubbles: true,
-        cancelable: false
-      }));
-    } catch (_) {}
+    const esm = clientKind() === "esm";
+    if (row) row.style.display = (CFG.noRecoil && esm) ? "block" : "none";
+    if (!CFG.noRecoil || !esm) { engaged = false; return; }
+    if (!mouseDown1) { engaged = false; return; }
+
+    const pitch = CAM_PITCH;
+    if (typeof pitch !== "number") return;
+    if (!engaged) { engaged = true; AIM_PITCH = pitch; lastErr = 0; useless = 0; ticks = 0; return; }
+
+    const err = pitch - AIM_PITCH;          /* positive = climbed (needs down) */
+    if (Math.abs(err) < 0.0004) return;     /* within a tenth of a degree */
+
+    /* learn: if pushing down did not reduce the error this frame, the event is
+       being ignored or the gain is wrong; adjust accordingly */
+    if (lastErr !== 0) {
+      const before = Math.abs(lastErr), after = Math.abs(err);
+      if (after >= before * 0.98) {
+        useless++;
+        if (before > 0.002) gain *= 1.6;    /* under-compensating */
+      } else {
+        useless = 0;
+      }
+    }
+    if (gain > 40) gain = 40;
+    if (gain < 0.02) gain = 0.02;
+
+    const px = Math.max(0.5, Math.min(30, Math.abs(err) * gain));
+    lastErr = err;
+    if (err > 0) {
+      const now = performance.now();
+      if (now - compAcc < 30) return;
+      compAcc = now;
+      pushDown(px);
+      ticks++;
+      if (useless > 45 && ticks > 60) {
+        setStatus("norecoil: เกมไม่รับ event ปลอม — ต้อง patch ที่ไฟล์เกม");
+      }
+    }
   };
   requestAnimationFrame(compTick);
 })();
