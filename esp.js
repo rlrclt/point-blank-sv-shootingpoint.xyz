@@ -13,7 +13,7 @@
   const CFG = {
     enabled: true, box: false, hpBar: false, name: false, distance: true,
     snapline: false, headDot: true, showMe: false, showAlly: false,
-    noRecoil: false, noSpread: false,
+    noRecoil: false, noSpread: false, nrComp: 0,   // px ของการดันเมาส์ลงชดเชย (ES-module client)
     // --- เพิ่มฟีเจอร์ใหม่ ---
     skeleton: false,     // วาดโครงข้อต่อตัวละติ (ปิด default เพื่อลด lag — เปิดได้ใน GUI)
     perfMode: false,    // Performance mode: ปิดฟีเจอร์หนัก (skeleton/box/hp/name/humanize) พร้อมกัน
@@ -192,6 +192,11 @@
       <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile (เข้าได้ทุกห้อง)</label>
       <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด NoRecoil (F9)</label>
       <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง (ตัวคูณ recoil) — ไม่เกี่ยวกับความแม่น</div>
+      <div id="pbCompRow" style="display:none;margin:2px 0 6px">
+        <label style="display:block">แรงชดเชยแนวตั้ง (ทดลอง) <b id="pbCompVal">0</b></label>
+        <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0" style="width:100%">
+        <div class="pbHelp">ไคลเอนต์นี้เป็น ES module — อ่านสถานะแรงดีดไม่ได้ จึงดันเมาส์ลงชดเชยแทนตอนยิง</div>
+      </div>
       <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
       <div class="pbHelp">ใส่ kick หลอกที่ "กล้องตอน render" เท่านั้น (ใช้คู่ NoRecoil) — ไม่แตะการเล็ง/กระสุน/เน็ตเวิร์ก</div>
       <label><input type="checkbox" data-c="noSpread"> กระสุนตรง NoSpread</label>
@@ -310,6 +315,20 @@
     });
   }
   // ผูก sliders
+  /* compensation slider: only meaningful on a client whose recoil state is not
+     reachable (ES-module build). It is revealed automatically below. */
+  const compRow = panel.querySelector("#pbCompRow");
+  const compSlider = panel.querySelector("#pbCompSlider");
+  const compVal = panel.querySelector("#pbCompVal");
+  if (compSlider) {
+    compSlider.value = CFG.nrComp == null ? 0 : CFG.nrComp;
+    if (compVal) compVal.textContent = compSlider.value;
+    compSlider.addEventListener("input", () => {
+      CFG.nrComp = parseFloat(compSlider.value) || 0;
+      if (compVal) compVal.textContent = compSlider.value;
+      saveCfg();
+    });
+  }
   const fovSlider = panel.querySelector("#pbFovSlider");
   const fovVal = panel.querySelector("#pbFovVal");
   if (fovSlider) {
@@ -2123,8 +2142,48 @@
   setInterval(() => {
     if (!CFG.noRecoil) return;
     const k = clientKind();
-    if (k === "esm") setStatus("norecoil: ไคลเอนต์นี้เป็น ES module — เข้าไม่ถึงสถานะแรงดีด");
+    if (k === "esm") setStatus("norecoil: ES module — ใช้แรงชดเชยแทน");
     else if (k === "none") setStatus("norecoil: ยังไม่พบออบเจ็กต์ผู้เล่น");
   }, 2000);
+
+  /* ───── compensation for clients whose recoil state is unreachable ─────
+     On the ES-module client the recoil accumulator lives inside a chunk, so
+     nothing outside can zero it. What the game still does is read the mouse:
+     after each shot it raises the view, and the only lever left from outside is
+     to feed the opposite motion back through the same input path the game
+     listens on. A synthetic mousemove with a positive movementY (down) is
+     delivered to the page's own handler, which is exactly where the kick is
+     applied. The strength is a user slider because it depends on sensitivity
+     and weapon.
+
+     It only runs when the state path is unavailable — on a classic client the
+     accumulator is zeroed directly and this stays idle. */
+  let compAcc = 0, mouseDown1 = false;
+  addEventListener("mousedown", (e) => { if (e.button === 0) mouseDown1 = true; }, true);
+  addEventListener("mouseup", (e) => { if (e.button === 0) mouseDown1 = false; }, true);
+  addEventListener("blur", () => { mouseDown1 = false; }, true);
+
+  const compTick = () => {
+    requestAnimationFrame(compTick);
+    const row = panel.querySelector("#pbCompRow");
+    if (row) row.style.display = (CFG.noRecoil && clientKind() === "esm") ? "block" : "none";
+    if (!CFG.noRecoil) return;
+    if (clientKind() !== "esm") return;
+    const px = CFG.nrComp || 0;
+    if (px <= 0) return;
+    if (!mouseDown1) return;                       /* only while firing */
+    const now = performance.now();
+    if (now - compAcc < 70) return;                /* ~14 ticks/s, matches auto fire */
+    compAcc = now;
+    try {
+      document.dispatchEvent(new MouseEvent("mousemove", {
+        movementX: 0,
+        movementY: px,
+        bubbles: true,
+        cancelable: false
+      }));
+    } catch (_) {}
+  };
+  requestAnimationFrame(compTick);
 })();
 
