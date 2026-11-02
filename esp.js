@@ -312,6 +312,11 @@
         try { setStatus(c.checked ? "เปิด mobile — กำลังรีโหลด..." : "ปิด mobile — กำลังรีโหลด..."); } catch (_) {}
         setTimeout(() => { try { location.reload(); } catch (_) {} }, 400);
       }
+      /* turning the recoil switch on is the natural moment to look for the chunk
+         that owns the recoil model */
+      if (key === "noRecoil" && c.checked) {
+        try { setTimeout(() => { scanEngine(); }, 600); } catch (_) {}
+      }
     });
   }
   // ผูก sliders
@@ -1836,6 +1841,54 @@
     } catch (_) {}
     return esm ? "esm" : "none";
   };
+
+  /* ───── find the recoil chunk ─────
+     On an ES-module client the recoil model lives in a lazily imported chunk
+     whose hashed name only exists after a match starts. Nothing static can be
+     fetched from outside to find it, but the page itself knows: every script it
+     loaded is in the resource timing buffer. Fetch those same-origin files back,
+     score them by the recoil model's fingerprints, and report the winner — that
+     name is what a real patch has to target. */
+  const RECOIL_SIGS = [
+    [/hPend/g, 3], [/recPitch/g, 4], [/vRt/g, 2], [/autoN/g, 2],
+    [/hRate/g, 1], [/hRestT/g, 1], [/recoil/gi, 1]
+  ];
+  const scanEngine = async () => {
+    const urls = [];
+    try {
+      for (const e of performance.getEntriesByType("resource")) {
+        if (/\.js(\?|$)/.test(e.name) && urls.indexOf(e.name) < 0) urls.push(e.name);
+      }
+    } catch (_) {}
+    const hits = [];
+    for (const u of urls) {
+      let txt = "";
+      try {
+        const r = await fetch(u, { credentials: "same-origin", cache: "force-cache" });
+        if (!r.ok) continue;
+        txt = await r.text();
+      } catch (_) { continue; }
+      let score = 0;
+      for (const [re, w] of RECOIL_SIGS) {
+        const m = txt.match(re);
+        if (m) score += m.length * w;
+      }
+      if (score > 0) hits.push({ url: u, score, len: txt.length });
+    }
+    hits.sort((a, b) => b.score - a.score);
+    window.__pbRecoilChunks = hits;
+    try {
+      if (hits.length) {
+        const f = hits[0].url.split("/").pop();
+        setStatus("recoil chunk: " + f + " (score " + hits[0].score + ") — ส่งชื่อนี้ให้ผู้ดูแล");
+      } else {
+        setStatus("recoil chunk: ไม่พบ — ยังไม่เข้าแมตช์?");
+      }
+    } catch (_) {}
+    try { console.log("[PB] recoil chunk scan", hits); } catch (_) {}
+    return hits;
+  };
+  window.__pbScanRecoil = scanEngine;
 
   let synced = false;          // เอาหลัก = วาดใน render hook ของเกม | ไม่ใช่ = โหมดรอแล้วใช้ rAF เอง
   let _lastHookFrame = -1;
