@@ -1794,6 +1794,30 @@
   const statusEl = panel.querySelector("#pbStatus");
   const titleEl = panel.querySelector("#pbTitle");
   const setStatus = (t) => { if (statusEl.textContent !== t) statusEl.textContent = t; };
+
+  /* Which client are we on? Recoil can only be cancelled when its state is
+     reachable: an old-style classic bundle publishes window.__pb, a classic
+     bundle with top-level consts exposes the player as Ye / P. The current
+     pbmobile-th.online client is a Vite ES-module build — its chunks import each
+     other and publish nothing on window, so no script running beside it can
+     read or zero the recoil accumulator. Saying so is better than a checkbox
+     that silently does nothing. */
+  const clientKind = () => {
+    try { if (window.__pb) return "legacy"; } catch (_) {}
+    try { if (typeof Ye !== "undefined" && Ye && Ye.s) return "live"; } catch (_) {}
+    try { if (typeof P !== "undefined" && P && P.s && P.rec) return "live"; } catch (_) {}
+    try { if (window.Ye && window.Ye.s) return "live"; } catch (_) {}
+    try { if (window.P && window.P.s && window.P.rec) return "live"; } catch (_) {}
+    /* ES-module build: nothing reachable. Detected by the module scripts the
+       page actually loaded, so the message is specific instead of a guess. */
+    let esm = false;
+    try {
+      esm = !!document.querySelector('script[type="module"]') ||
+        !!document.querySelector('link[rel="modulepreload"]');
+    } catch (_) {}
+    return esm ? "esm" : "none";
+  };
+
   let synced = false;          // เอาหลัก = วาดใน render hook ของเกม | ไม่ใช่ = โหมดรอแล้วใช้ rAF เอง
   let _lastHookFrame = -1;
   function setMode(on) {
@@ -2069,7 +2093,38 @@
     const pb = window.__pb;
     const cam = pb?.player?.camera;
     if (pb && cam) aimAssistTick(pb, cam);
-    drawOnce(pb?.scene, cam);
+      drawOnce(pb?.scene, cam);
   })();
+
+  /* ───── live recoil path ─────
+     Classic bundles (pbmobile.app, pbblaze) keep the player in a top-level
+     const — `Ye` there, `P` on pbblaze — and its recoil accumulator is
+     rec = { v, A, t, T, hPend, hRate, hState }. Zeroing it every frame is what
+     actually cancels the kick; the old `pb.player.addRecoil` hook only ever
+     ran on an old-style `window.__pb` client and is dead elsewhere. On an
+     ES-module client (pbmobile-th.online today) none of these exist, so this
+     loop does nothing and the status line says so. */
+  (function liveRecoilLoop() {
+    requestAnimationFrame(liveRecoilLoop);
+    if (!CFG.noRecoil) return;
+    let g = null;
+    try { if (typeof Ye !== "undefined" && Ye && Ye.rec) g = Ye; } catch (_) {}
+    if (!g) { try { if (typeof P !== "undefined" && P && P.rec) g = P; } catch (_) {} }
+    if (!g) return;
+    try {
+      const r = g.rec;
+      r.v = 0; r.A = 0; r.t = 0; r.T = 0;
+      r.hPend = 0; r.hRate = 0; r.hState = 0;
+      if (typeof g.kick === "number" && g.kick > 0) g.kick = 0;
+    } catch (_) {}
+  })();
+
+  /* tell the truth about the checkbox on a client we cannot reach */
+  setInterval(() => {
+    if (!CFG.noRecoil) return;
+    const k = clientKind();
+    if (k === "esm") setStatus("norecoil: ไคลเอนต์นี้เป็น ES module — เข้าไม่ถึงสถานะแรงดีด");
+    else if (k === "none") setStatus("norecoil: ยังไม่พบออบเจ็กต์ผู้เล่น");
+  }, 2000);
 })();
 
