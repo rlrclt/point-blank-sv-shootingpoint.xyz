@@ -191,6 +191,10 @@ function applyBonus(ws, v) {           // v = 0..0.9
 
 > ฟีเจอร์จริงใน `esp.js` v1.10: **Stat Bonus (ไม่ต้องมีไอเทม)** — เขียน `abilities.quickChange/swapTime/reloadTime` + `itemFx` ทุกเฟรม
 > เปิดที่เมนู AIM → `โบนัส Reload/Swap` (สไลเดอร์ / ช่องเลข / RESET 0.50)
+>
+> v1.11 เพิ่ม **โปรไฟล์ไอเท็ม**: อ่าน `PC_EQUIP` จาก `avatarData-*.json` ที่หน้าโหลดอยู่แล้ว
+> (ผ่าน `performance.getEntriesByType("resource")`) แล้วเลือกไอเท็ม → ใช้ค่า `WeaponSwapTime` / `WeaponReloadTime` / `QuickChangeWeapon` / `FastReload_*` ของไอเท็มนั้นตรง ๆ
+> พร้อมอ่านค่าตัวคูณที่จะได้ (swap ×… / reload ×…)
 
 ---
 
