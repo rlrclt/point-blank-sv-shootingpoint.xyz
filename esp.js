@@ -14,6 +14,8 @@
     enabled: true, box: false, hpBar: false, name: false, distance: true,
     snapline: false, headDot: true, showMe: false, showAlly: false,
     noRecoil: false, noSpread: false, nrComp: 0,   // px ของการดันเมาส์ลงชดเชย (ES-module client)
+    recoilLevel: 100,   // % การลดแรงดีด (100 = ตัดเต็ม, 0 = ปล่อยเต็ม)
+    spreadLevel: 100,   // % การลด spread (100 = ตรงเป๊ะ, 0 = ปล่อยเต็ม)
     // --- เพิ่มฟีเจอร์ใหม่ ---
     skeleton: false,     // วาดโครงข้อต่อตัวละติ (ปิด default เพื่อลด lag — เปิดได้ใน GUI)
     perfMode: false,    // Performance mode: ปิดฟีเจอร์หนัก (skeleton/box/hp/name/humanize) พร้อมกัน
@@ -60,7 +62,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.18";
+  const VERSION = "v1.19";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -195,7 +197,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.18</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.19</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -211,6 +213,9 @@
         <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
         <div class="pbSec">Recoil</div>
         <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด (F9)</label>
+        <label style="display:block;font-size:10px;color:#9ab">ระดับลดแรงดีด: <b id="pbRecLvlVal">100</b>%
+          <input type="range" id="pbRecLvl" min="0" max="100" step="5" value="100" style="width:100%">
+        </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น</div>
         <div id="pbCompRow" style="display:none">
           <label>แรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
@@ -220,6 +225,9 @@
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
         <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
+        <label style="display:block;font-size:10px;color:#9ab">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
+          <input type="range" id="pbSprLvl" min="0" max="100" step="5" value="100" style="width:100%">
+        </label>
         <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0)</div>
       </div>
 
@@ -435,6 +443,29 @@
       saveCfg();
     });
   }
+  const recLvl = panel.querySelector("#pbRecLvl");
+  const recLvlVal = panel.querySelector("#pbRecLvlVal");
+  if (recLvl) {
+    recLvl.value = CFG.recoilLevel == null ? 100 : CFG.recoilLevel;
+    if (recLvlVal) recLvlVal.textContent = recLvl.value;
+    recLvl.addEventListener("input", () => {
+      CFG.recoilLevel = +recLvl.value;
+      if (recLvlVal) recLvlVal.textContent = recLvl.value;
+      saveCfg();
+    });
+  }
+  const sprLvl = panel.querySelector("#pbSprLvl");
+  const sprLvlVal = panel.querySelector("#pbSprLvlVal");
+  if (sprLvl) {
+    sprLvl.value = CFG.spreadLevel == null ? 100 : CFG.spreadLevel;
+    if (sprLvlVal) sprLvlVal.textContent = sprLvl.value;
+    sprLvl.addEventListener("input", () => {
+      CFG.spreadLevel = +sprLvl.value;
+      if (sprLvlVal) sprLvlVal.textContent = sprLvl.value;
+      saveCfg();
+    });
+  }
+
   const fovSlider = panel.querySelector("#pbFovSlider");
   const fovVal = panel.querySelector("#pbFovVal");
   if (fovSlider) {
@@ -1786,6 +1817,10 @@
   let activeWS = null;
   let lastFrameTime = performance.now();
 
+  /* ระดับการลด (0..100%) — 100 = ตัดเต็ม, 0 = ปล่อยเต็ม */
+  const recoilKeep = () => 1 - Math.max(0, Math.min(100, Number(CFG.recoilLevel == null ? 100 : CFG.recoilLevel))) / 100;
+  const spreadKeep = () => 1 - Math.max(0, Math.min(100, Number(CFG.spreadLevel == null ? 100 : CFG.spreadLevel))) / 100;
+
   function hookNoRecoil(pb) {
     if (!pb) return;
 
@@ -1801,10 +1836,11 @@
       const origAddRecoil = pb.player.addRecoil;
       pb.player.addRecoil = function (pitch, yaw) {
         if (CFG.noRecoil) {
-          this.recoilPitch = 0;
+          const k = recoilKeep();
+          this.recoilPitch *= k;
           // trigger visual humanization ตอนเกมเรียก addRecoil (= ยิงจริง)
           humanOnShot();
-          return;
+          return origAddRecoil.call(this, pitch * k, yaw * k);
         }
         return origAddRecoil.call(this, pitch, yaw);
       };
@@ -1819,28 +1855,29 @@
 
     // เคลียร์ค่าแรงดีดสะสมแบบ Real-time ทุกเฟรม
     if (CFG.noRecoil) {
-      ws.recV = 0;
-      ws.recV0 = 0;
-      ws.recVT = 0;
-      ws.recVt = 0;
-      ws.recH = 0;
-      ws.recHt = 0;
-      ws.yawOff = 0;
-      ws.recoilPitch = 0;
-      ws.recoilYaw = 0;
+      const k = recoilKeep();
+      ws.recV *= k;
+      ws.recV0 *= k;
+      ws.recVT *= k;
+      ws.recVt *= k;
+      ws.recH *= k;
+      ws.recHt *= k;
+      ws.yawOff *= k;
+      ws.recoilPitch *= k;
+      ws.recoilYaw *= k;
       // ห้าม zero appliedPitch/appliedYaw — syncCamera ใช้ค่านี้คำนวณ delta เพื่อ
-      // "ดึงกล้องกลับ" ให้ตรงกับ recoilPitch=0 ถ้าล้างทิ้ง กล้องจะค้างเงยค้างอยู่
-      ws.shakeP = 0;
-      ws.shakeR = 0;
-      ws.pbShake = null;
+      // "ดึงกล้องกลับ" ให้ตรงกับ recoilPitch ที่ถูกย่อ
+      ws.shakeP *= k;
+      ws.shakeR *= k;
+      if (k === 0) ws.pbShake = null;
     }
     if (CFG.noSpread) {
-      // NoSpread แยกจาก humanize: spread จริงต้องเป็น 0 เสมอ
-      ws.xhCur = 0;
-      ws.xhPrev = 0;
-      ws.xhStart = 0;
-      ws.xhTarget = 0;
-      ws.spreadNow = 0;
+      const k = spreadKeep();
+      ws.xhCur *= k;
+      ws.xhPrev *= k;
+      ws.xhStart *= k;
+      ws.xhTarget *= k;
+      ws.spreadNow *= k;
     }
 
     // Backup & Patch Weapon Parameters
@@ -1858,11 +1895,13 @@
             horzMax: p.recoil.horzMax,
           };
           if (CFG.noRecoil) {
-            p.recoil.camSyncRate = 0;
-            p.recoil.vertAngle = 0;
-            p.recoil.vertMax = 0;
-            p.recoil.horzAngle = 0;
-            p.recoil.horzMax = 0;
+            const k = recoilKeep();
+            const o = p.recoil.__orig;
+            p.recoil.camSyncRate = o.camSyncRate * k;
+            p.recoil.vertAngle = o.vertAngle * k;
+            p.recoil.vertMax = o.vertMax * k;
+            p.recoil.horzAngle = o.horzAngle * k;
+            p.recoil.horzMax = o.horzMax * k;
           } else {
             Object.assign(p.recoil, p.recoil.__orig);
           }
@@ -1873,13 +1912,16 @@
             cross: p.spread.cross ? { ...p.spread.cross } : null,
           };
           if (CFG.noSpread) {
-            p.spread.deviation = 0;
+            const k = spreadKeep();
+            const o = p.spread.__orig;
+            p.spread.deviation = o.deviation * k;
             if (p.spread.cross) {
-              p.spread.cross.min = 0;
-              p.spread.cross.max = 0;
-              p.spread.cross.stand = 0;
-              p.spread.cross.move = 0;
-              p.spread.cross.jump = 0;
+              const oc = o.cross || {};
+              p.spread.cross.min = (oc.min || 0) * k;
+              p.spread.cross.max = (oc.max || 0) * k;
+              p.spread.cross.stand = (oc.stand || 0) * k;
+              p.spread.cross.move = (oc.move || 0) * k;
+              p.spread.cross.jump = (oc.jump || 0) * k;
             }
           } else {
             p.spread.deviation = p.spread.__orig.deviation;
@@ -1903,31 +1945,26 @@
       if (typeof origKick === "function") {
         ws.kick = function (def) {
           if (!CFG.noRecoil) return origKick.apply(this, arguments);
-
-          // NoSpread ปิด → วิ่งของจริงเพื่อให้ xhCur/xhPrev อัปเดตตาม spread
-          let res;
-          if (!CFG.noSpread) {
-            res = origKick.apply(this, arguments);
-          } else {
-            this.xhPrev = 0;
-            this.xhCur = 0;
-            this.xhStart = 0;
-            this.xhTarget = 0;
-            res = { kickH: 0 };
+          const rk = recoilKeep();
+          const sk = spreadKeep();
+          /* run the real kick so spread grows naturally, then scale both
+             results — level 100 reproduces the old "all zero" behaviour. */
+          const res = origKick.apply(this, arguments);
+          this.recV *= rk;
+          this.recV0 *= rk;
+          this.recVT *= rk;
+          this.recVt *= rk;
+          this.recH *= rk;
+          this.recHt *= rk;
+          this.yawOff *= rk;
+          this.recoilPitch *= rk;
+          this.recoilYaw *= rk;
+          if (CFG.noSpread) {
+            this.xhPrev *= sk;
+            this.xhCur *= sk;
+            this.xhStart *= sk;
+            this.xhTarget *= sk;
           }
-
-          // ล้าง recoil ที่เพิ่งถูกเซ็ต (ไม่แตะ appliedPitch/appliedYaw — syncCamera ใช้ดึงกล้องกลับ)
-          this.recV = 0;
-          this.recV0 = 0;
-          this.recVT = 0;
-          this.recVt = 0;
-          this.recH = 0;
-          this.recHt = 0;
-          this.yawOff = 0;
-          this.recoilPitch = 0;
-          this.recoilYaw = 0;
-
-          // trigger human visual kick (ถ้า addRecoil ไม่ถูกเรียกในสาย ws.kick)
           humanOnShot();
           return res;
         };
@@ -1938,12 +1975,14 @@
       if (typeof origUpdateRecoil === "function") {
         ws.updateRecoil = function (dt) {
           if (CFG.noRecoil) {
-            this.recV = 0;
-            this.recH = 0;
-            this.yawOff = 0;
-            this.recoilPitch = 0;
-            this.recoilYaw = 0;
-            return;
+            const res = origUpdateRecoil.call(this, dt);
+            const k = recoilKeep();
+            this.recV *= k;
+            this.recH *= k;
+            this.yawOff *= k;
+            this.recoilPitch *= k;
+            this.recoilYaw *= k;
+            return res;
           }
           return origUpdateRecoil.call(this, dt);
         };
@@ -1954,9 +1993,9 @@
       if (typeof origAimRay === "function") {
         ws.aimRay = function () {
           if (CFG.noRecoil) {
-            // บังคับ recV/recoilPitch = 0 ก่อนคำนวณทิศ (visual != ballistic)
-            this.recV = 0;
-            this.recoilPitch = 0;
+            const k = recoilKeep();
+            this.recV *= k;
+            this.recoilPitch *= k;
           }
           return origAimRay.apply(this, arguments);
         };
@@ -1967,12 +2006,14 @@
       if (typeof origUpdateCrosshair === "function") {
         ws.updateCrosshair = function (...args) {
           if (CFG.noSpread) {
-            this.xhCur = 0;
-            this.xhStart = 0;
-            this.xhTarget = 0;
-            this.xhPrev = 0;
-            this.spreadNow = 0;
-            return;
+            const res = origUpdateCrosshair.apply(this, args);
+            const k = spreadKeep();
+            this.xhCur *= k;
+            this.xhStart *= k;
+            this.xhTarget *= k;
+            this.xhPrev *= k;
+            this.spreadNow *= k;
+            return res;
           }
           return origUpdateCrosshair.apply(this, args);
         };
