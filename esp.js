@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.12";
+  const VERSION = "v1.13";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -195,7 +195,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.12</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.13</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -2474,6 +2474,10 @@
         add("item:" + id, b.key + (bits.length ? " · " + bits.join(" · ") : ""));
       }
       sel.value = cur;
+      if (cur.startsWith("item:")) {
+        const b = itemBonus(EQUIP && EQUIP[cur.slice(5)]);
+        if (b) setBonus(kind === "swap" ? "bonusSwap" : "bonusReload", (kind === "swap" ? b.s : b.r) || 0, false);
+      }
     };
     fill(swapSel, CFG.swapProfile || "custom", "swap");
     fill(reloadSel, CFG.reloadProfile || "custom", "reload");
@@ -2495,6 +2499,12 @@
     swapSel.value = CFG.swapProfile || "custom";
     swapSel.addEventListener("change", () => {
       CFG.swapProfile = swapSel.value;
+      /* seed the custom slider with the item's real value so fine-tuning can
+         continue from there (switch to "กำหนดเอง" and it is already set) */
+      if (swapSel.value.startsWith("item:")) {
+        const b = itemBonus(EQUIP && EQUIP[swapSel.value.slice(5)]);
+        if (b) setBonus("bonusSwap", b.s || 0, false);
+      }
       saveCfg(); updateBonusCalc();
     });
   }
@@ -2502,6 +2512,10 @@
     reloadSel.value = CFG.reloadProfile || "custom";
     reloadSel.addEventListener("change", () => {
       CFG.reloadProfile = reloadSel.value;
+      if (reloadSel.value.startsWith("item:")) {
+        const b = itemBonus(EQUIP && EQUIP[reloadSel.value.slice(5)]);
+        if (b) setBonus("bonusReload", b.r || 0, false);
+      }
       saveCfg(); updateBonusCalc();
     });
   }
