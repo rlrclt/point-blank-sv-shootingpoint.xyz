@@ -42,6 +42,7 @@
     fastSwap: false,        // เปลี่ยนปืนเร็ว
     swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
     statBonus: false,       // เปิดโบนัส reload/swap โดยไม่ต้องใส่ไอเทม
+    bonusProfile: "custom", // "custom" | "item:<id>" | "off"
     bonusReload: 0.5,       // 0..0.9 (ยิ่งมาก ยิ่งเร็ว)
     bonusSwap: 0.5,         // 0..0.9
     aimDrawFov: true,   // วาดวงกลม FOV
@@ -58,7 +59,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.10";
+  const VERSION = "v1.11";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -193,7 +194,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.10 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.11 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
     </div>
     <div id="pbBody">
       <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
@@ -254,6 +255,13 @@
         <div style="border-top:1px solid #2a3140;margin:4px 0;padding-top:4px">
           <label><input type="checkbox" data-c="statBonus"> โบนัส Reload/Swap (ไม่ต้องมีไอเทม)</label>
           <div class="pbHelp">เขียนค่า reloadTime / swapTime / quickChange ลง instance ของอาวุธทุกเฟรม</div>
+          <label style="font-size:10px;color:#9ab">โปรไฟล์:
+            <select id="pbBonusProfile"
+              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;margin-left:4px;max-width:190px">
+              <option value="custom">กำหนดเอง (สไลเดอร์)</option>
+            </select>
+          </label>
+          <div class="pbHelp" id="pbBonusCalc">—</div>
           <label style="font-size:10px;color:#9ab">Reload bonus: <span id="pbBonusRVal">0.50</span>
             <input type="range" id="pbBonusRSlider" min="0" max="0.9" step="0.01"
               value="0.5" style="width:100%;margin-top:2px">
@@ -2340,30 +2348,138 @@
      for the existing formulas to use them — no equipment, no prototype patch,
      no gameplay constant (q/ci) touched. Re-applied every frame because
      setPartAbilities() replaces the object on equip / respawn. */
+  /* ───── item profiles ─────
+     The page already fetched its avatar table (PC_EQUIP). It is visible in
+     resource timing, so a profile can apply exactly the ability values an item
+     carries instead of a guessed number. */
+  let EQUIP = null;
+  const FAM = { Assault: "AR", MG: "MG", Pistol: "HG", SG: "SG", SMG: "SMG", Sniper: "SR" };
+  const itemBonus = (it) => {
+    const ab = it && it.ability;
+    if (!ab) return null;
+    const r = Number(ab.WeaponReloadTime) || 0;
+    const s = Number(ab.WeaponSwapTime) || 0;
+    const qc = (Number(ab.QuickChangeWeapon) || 0) > 0;
+    const fr = {};
+    for (const [k, v] of Object.entries(ab)) {
+      const m = /^FastReload_([A-Za-z]+)$/.exec(k);
+      if (m && FAM[m[1]] && v) fr[FAM[m[1]]] = Number(v) || 1;
+    }
+    return { r, s, qc, fr, key: it.key || String(it.id || "") };
+  };
+
+  const bonusSel = panel.querySelector("#pbBonusProfile");
+  const bonusCalc = panel.querySelector("#pbBonusCalc");
+  const updateBonusCalc = () => {
+    if (!bonusCalc) return;
+    const prof = CFG.bonusProfile || "custom";
+    let b = null;
+    if (prof === "custom") b = { r: Number(CFG.bonusReload) || 0, s: Number(CFG.bonusSwap) || 0, qc: true };
+    else if (prof.startsWith("item:")) b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
+    if (!b) { bonusCalc.textContent = prof === "off" ? "ปิด" : "—"; return; }
+    const swapMul = b.qc ? Math.max(0.1, 1 - b.s) : 1;
+    const reloadMul = Math.max(0.1, 1 - b.r);
+    bonusCalc.textContent =
+      "swap ×" + (1 / swapMul).toFixed(2) + " · reload ×" + (1 / reloadMul).toFixed(2) +
+      " · " + (b.fr && Object.keys(b.fr).length ? "fast " + Object.keys(b.fr).join("/") : "fast -");
+  };
+  const fillProfiles = () => {
+    if (!bonusSel || !EQUIP) return;
+    const cur = CFG.bonusProfile || "custom";
+    bonusSel.innerHTML = "";
+    const add = (v, t) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = t; bonusSel.appendChild(o);
+    };
+    add("custom", "กำหนดเอง (สไลเดอร์)");
+    add("off", "ปิด");
+    const rows = [];
+    for (const [id, it] of Object.entries(EQUIP)) {
+      const b = itemBonus(it);
+      if (!b) continue;
+      if (!b.r && !b.s && !b.qc && !Object.keys(b.fr).length) continue;
+      rows.push([id, b]);
+    }
+    rows.sort((a, b) => a[1].key.localeCompare(b[1].key));
+    for (const [id, b] of rows.slice(0, 400)) {
+      const bits = [];
+      if (b.s) bits.push("swap " + b.s);
+      if (b.r) bits.push("reload " + b.r);
+      if (Object.keys(b.fr).length) bits.push("fast " + Object.keys(b.fr).join("/"));
+      add("item:" + id, b.key + (bits.length ? " · " + bits.join(" · ") : ""));
+    }
+    bonusSel.value = cur;
+    updateBonusCalc();
+  };
+  const loadEquip = () => {
+    if (EQUIP) return;
+    try {
+      const names = performance.getEntriesByType("resource").map((e) => e.name);
+      const url = names.find((n) => /avatarData-[^/]+\.json/i.test(n));
+      if (!url) return;
+      fetch(url).then((r) => r.json()).then((j) => {
+        EQUIP = j.PC_EQUIP || null;
+        fillProfiles();
+      }).catch(() => {});
+    } catch (e) {}
+  };
+  if (bonusSel) {
+    bonusSel.value = CFG.bonusProfile || "custom";
+    bonusSel.addEventListener("change", () => {
+      CFG.bonusProfile = bonusSel.value;
+      saveCfg();
+      updateBonusCalc();
+    });
+  }
+  loadEquip();
+  setInterval(loadEquip, 3000);
+  setInterval(updateBonusCalc, 500);
+
   function bonusTick(pb) {
     if (!CFG.statBonus) return;
+    const prof = CFG.bonusProfile || "custom";
+    if (prof === "off") return;
     const ws = weaponSystemOf(pb);
     if (!ws) return;
-    const r = Math.max(0, Math.min(0.9, Number(CFG.bonusReload) || 0));
-    const s = Math.max(0, Math.min(0.9, Number(CFG.bonusSwap) || 0));
+    let r = 0, s = 0, qc = 0, fr = null, custom = false;
+    if (prof === "custom") {
+      r = Math.max(0, Math.min(0.9, Number(CFG.bonusReload) || 0));
+      s = Math.max(0, Math.min(0.9, Number(CFG.bonusSwap) || 0));
+      qc = 1;
+      fr = "all";
+      custom = true;
+    } else if (prof.startsWith("item:")) {
+      const b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
+      if (!b) return;
+      r = b.r; s = b.s; qc = (b.qc || s > 0) ? 1 : 0; fr = b.fr;
+    } else return;
+
     const a = ws.abilities;
     if (a && typeof a === "object" && !Object.isFrozen(a)) {
-      a.quickChange = 1;              // gate: swapTime only counts when > 0
-      a.swapTime = s;
-      a.reloadTime = r;
+      a.quickChange = qc;              // gate: swapTime only counts when > 0
+      a.swapTime = Math.min(0.9, Math.max(0, s));
+      a.reloadTime = Math.min(0.9, Math.max(0, r));
       if (!a.fastReload || typeof a.fastReload !== "object") a.fastReload = {};
-      for (const slot of (ws.slots || [])) {
-        const def = slot && slot.def;
-        const fam = def && (def.family || (def.params && def.params.family));
-        if (fam) a.fastReload[fam] = 1;
+      if (fr === "all") {
+        for (const slot of (ws.slots || [])) {
+          const def = slot && slot.def;
+          const fam = def && (def.family || (def.params && def.params.family));
+          if (fam) a.fastReload[fam] = 1;
+        }
+      } else if (fr) {
+        for (const k of Object.keys(fr)) a.fastReload[k] = fr[k];
       }
     }
-    const fx = ws.itemFx;
-    if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
-      fx.quickChangeWeapon = 1;
-      fx.quickChangeReload = 1;
-      fx.beretQuickChange = 1;
-      fx.beretFastReload = 1;
+    /* itemFx is only the legacy path (abilities === null). Custom mode sets
+       every flag; an item profile must not add bonuses the item does not have. */
+    if (custom) {
+      const fx = ws.itemFx;
+      if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
+        fx.quickChangeWeapon = 1;
+        fx.quickChangeReload = 1;
+        fx.beretQuickChange = 1;
+        fx.beretFastReload = 1;
+      }
     }
   }
 
