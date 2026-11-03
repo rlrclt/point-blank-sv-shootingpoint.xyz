@@ -3,7 +3,7 @@
   const inject = () => {
     if (document.querySelector('script[data-pb-esp="1"]')) return;
     const s = document.createElement("script");
-    s.src = chrome.runtime.getURL("esp.js");
+    s.src = chrome.runtime.getURL("esp.js") + "?v=" + Date.now();
     s.dataset.pbEsp = "1";
     (document.head || document.documentElement).appendChild(s);
   };

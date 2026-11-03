@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.17.1";
+  const VERSION = "v1.17.2";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -196,7 +196,7 @@
   panel.innerHTML = `
     <canvas id="pbFx"></canvas>
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.17.1</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.17.2</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
