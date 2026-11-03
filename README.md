@@ -23,6 +23,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 | Lock indicator (จุด/เส้น/ชื่อส่วน) | AIM → 3 toggle |
 | Fast swap (50–1500 ms, reset 250) | AIM → Fast Swap |
 | NoRecoil / NoSpread / Humanize | แท็บหลัก |
+| ระดับลดแรงดีด / ระดับกระสุนตรง (0–100%) | CORE → สไลเดอร์ใต้ toggle |
 | Mobile bypass | checkbox ปลอมเป็น Mobile |
 
 > ใช้เพื่อการศึกษา/ทดลองบนเซิร์ฟเวอร์ของคุณเอง — anti-cheat ฝั่งเซิร์ฟเวอร์ยังตรวจพฤติกรรมได้เสมอ
