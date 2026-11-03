@@ -41,6 +41,9 @@
     aimVisibleOnly: true,   // ไม่ล็อคทะลุกำแพง (raycast จริง)
     fastSwap: false,        // เปลี่ยนปืนเร็ว
     swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
+    statBonus: false,       // เปิดโบนัส reload/swap โดยไม่ต้องใส่ไอเทม
+    bonusReload: 0.5,       // 0..0.9 (ยิ่งมาก ยิ่งเร็ว)
+    bonusSwap: 0.5,         // 0..0.9
     aimDrawFov: true,   // วาดวงกลม FOV
     aimDrawLock: true,  // วาดจุดล็อค (วงกลม/กากบาทที่ joint)
     aimDrawLink: true,  // เส้นจากกลางจอไปจุดล็อค
@@ -55,7 +58,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.9";
+  const VERSION = "v1.10";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -190,7 +193,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.9 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.10 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
     </div>
     <div id="pbBody">
       <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
@@ -246,6 +249,27 @@
             <button id="pbSwapReset" type="button"
               style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">RESET</button>
             <span class="pbHelp" style="margin:0">default 250 ms</span>
+          </div>
+        </div>
+        <div style="border-top:1px solid #2a3140;margin:4px 0;padding-top:4px">
+          <label><input type="checkbox" data-c="statBonus"> โบนัส Reload/Swap (ไม่ต้องมีไอเทม)</label>
+          <div class="pbHelp">เขียนค่า reloadTime / swapTime / quickChange ลง instance ของอาวุธทุกเฟรม</div>
+          <label style="font-size:10px;color:#9ab">Reload bonus: <span id="pbBonusRVal">0.50</span>
+            <input type="range" id="pbBonusRSlider" min="0" max="0.9" step="0.01"
+              value="0.5" style="width:100%;margin-top:2px">
+          </label>
+          <label style="font-size:10px;color:#9ab">Swap bonus: <span id="pbBonusSVal">0.50</span>
+            <input type="range" id="pbBonusSSlider" min="0" max="0.9" step="0.01"
+              value="0.5" style="width:100%;margin-top:2px">
+          </label>
+          <div style="display:flex;gap:4px;align-items:center;margin-top:2px">
+            <input type="number" id="pbBonusRNum" min="0" max="0.9" step="0.01" value="0.5"
+              style="width:70px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
+            <input type="number" id="pbBonusSNum" min="0" max="0.9" step="0.01" value="0.5"
+              style="width:70px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
+            <button id="pbBonusReset" type="button"
+              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">RESET</button>
+            <span class="pbHelp" style="margin:0">default 0.50 / 0.50</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:3px">
@@ -427,6 +451,51 @@
   }
   if (swapReset) swapReset.addEventListener("click", () => setSwapMs(SWAP_DEF, true));
   setSwapMs(CFG.swapMs, false);
+
+  /* stat bonus (reload / swap) — writes the bonus object the weapon system
+     already reads, so it works with no items equipped. Instance only: no
+     prototype, no frozen gameplay constants. */
+  const bRSlider = panel.querySelector("#pbBonusRSlider");
+  const bSSlider = panel.querySelector("#pbBonusSSlider");
+  const bRNum = panel.querySelector("#pbBonusRNum");
+  const bSNum = panel.querySelector("#pbBonusSNum");
+  const bRVal = panel.querySelector("#pbBonusRVal");
+  const bSVal = panel.querySelector("#pbBonusSVal");
+  const bReset = panel.querySelector("#pbBonusReset");
+  const BONUS_DEF = 0.5;
+  const setBonus = (key, v, save) => {
+    let n = Number(v);
+    if (!isFinite(n)) n = BONUS_DEF;
+    n = Math.round(Math.max(0, Math.min(0.9, n)) * 100) / 100;
+    CFG[key] = n;
+    const isR = key === "bonusReload";
+    if (isR) {
+      if (bRSlider) bRSlider.value = n;
+      if (bRNum) bRNum.value = n;
+      if (bRVal) bRVal.textContent = n.toFixed(2);
+    } else {
+      if (bSSlider) bSSlider.value = n;
+      if (bSNum) bSNum.value = n;
+      if (bSVal) bSVal.textContent = n.toFixed(2);
+    }
+    if (save) saveCfg();
+  };
+  if (bRSlider) bRSlider.addEventListener("input", () => setBonus("bonusReload", bRSlider.value, true));
+  if (bSSlider) bSSlider.addEventListener("input", () => setBonus("bonusSwap", bSSlider.value, true));
+  if (bRNum) {
+    bRNum.addEventListener("input", () => { if (bRNum.value !== "") setBonus("bonusReload", bRNum.value, false); });
+    bRNum.addEventListener("change", () => setBonus("bonusReload", bRNum.value, true));
+  }
+  if (bSNum) {
+    bSNum.addEventListener("input", () => { if (bSNum.value !== "") setBonus("bonusSwap", bSNum.value, false); });
+    bSNum.addEventListener("change", () => setBonus("bonusSwap", bSNum.value, true));
+  }
+  if (bReset) bReset.addEventListener("click", () => {
+    setBonus("bonusReload", BONUS_DEF, false);
+    setBonus("bonusSwap", BONUS_DEF, true);
+  });
+  setBonus("bonusReload", CFG.bonusReload, false);
+  setBonus("bonusSwap", CFG.bonusSwap, false);
 
   const boneSelect = panel.querySelector("#pbBoneSelect");  if (boneSelect) {
     boneSelect.value = CFG.aimBone;
@@ -2265,6 +2334,39 @@
     }
   }
 
+  /* ───── stat bonus without items ─────
+     The weapon system reads its bonuses from `abilities` (built from equipped
+     items) and falls back to `itemFx`. Writing those instance fields is enough
+     for the existing formulas to use them — no equipment, no prototype patch,
+     no gameplay constant (q/ci) touched. Re-applied every frame because
+     setPartAbilities() replaces the object on equip / respawn. */
+  function bonusTick(pb) {
+    if (!CFG.statBonus) return;
+    const ws = weaponSystemOf(pb);
+    if (!ws) return;
+    const r = Math.max(0, Math.min(0.9, Number(CFG.bonusReload) || 0));
+    const s = Math.max(0, Math.min(0.9, Number(CFG.bonusSwap) || 0));
+    const a = ws.abilities;
+    if (a && typeof a === "object" && !Object.isFrozen(a)) {
+      a.quickChange = 1;              // gate: swapTime only counts when > 0
+      a.swapTime = s;
+      a.reloadTime = r;
+      if (!a.fastReload || typeof a.fastReload !== "object") a.fastReload = {};
+      for (const slot of (ws.slots || [])) {
+        const def = slot && slot.def;
+        const fam = def && (def.family || (def.params && def.params.family));
+        if (fam) a.fastReload[fam] = 1;
+      }
+    }
+    const fx = ws.itemFx;
+    if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
+      fx.quickChangeWeapon = 1;
+      fx.quickChangeReload = 1;
+      fx.beretQuickChange = 1;
+      fx.beretFastReload = 1;
+    }
+  }
+
   function hookRenderer() {
     const R = window.__pbR;
     if (!R || typeof R.render !== "function") return false;
@@ -2284,6 +2386,7 @@
           _lastAimFrame = fn;
           aimAssistTick(pbNow, camera);
           fastSwapTick(pbNow);
+          bonusTick(pbNow);
         }
       }
 
@@ -2330,7 +2433,7 @@
     const pb = window.__pb;
     const cam = pb?.player?.camera;
     if (pb && cam) aimAssistTick(pb, cam);
-    if (pb) fastSwapTick(pb);
+    if (pb) { fastSwapTick(pb); bonusTick(pb); }
       drawOnce(pb?.scene, cam);
   })();
 

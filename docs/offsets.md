@@ -189,6 +189,9 @@ function applyBonus(ws, v) {           // v = 0..0.9
 - **อย่า** แก้ `q` / `ci` (ค่าคงที่เกมถูก freeze + hash → `const-tamper`)
 - ทางที่เสถียรกว่า stat: clamp `switchTimer` / `reloadTimer` ตรง ๆ
 
+> ฟีเจอร์จริงใน `esp.js` v1.10: **Stat Bonus (ไม่ต้องมีไอเทม)** — เขียน `abilities.quickChange/swapTime/reloadTime` + `itemFx` ทุกเฟรม
+> เปิดที่เมนู AIM → `โบนัส Reload/Swap` (สไลเดอร์ / ช่องเลข / RESET 0.50)
+
 ---
 
 ## 7) ดาเมจ (`pbConfig-BTAdk4SQ.js`)
