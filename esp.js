@@ -44,7 +44,7 @@
     statBonus: false,       // เปิดโบนัส reload/swap โดยไม่ต้องใส่ไอเทม
     swapProfile: "custom",  // "custom" | "item:<id>" | "off"
     reloadProfile: "custom",// "custom" | "item:<id>" | "off"
-    bonusReload: 0.5,       // 0..0.9 (ยิ่งมาก ยิ่งเร็ว)
+    bonusReload: 0.25,      // 0..0.9 — ค่าจริงของไอเท็มรีโหลดไว = 0.25
     bonusSwap: 0.5,         // 0..0.9
     aimDrawFov: true,   // วาดวงกลม FOV
     aimDrawLock: true,  // วาดจุดล็อค (วงกลม/กากบาทที่ joint)
@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.14";
+  const VERSION = "v1.15";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -195,7 +195,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.14</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.15</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -313,7 +313,7 @@
         <div class="pbRow">
           <input type="number" id="pbBonusRNum" min="0" max="0.9" step="0.01" value="0.5">
           <button id="pbBonusReset" type="button">RESET</button>
-          <span class="pbHelp" style="margin:0">default 0.50</span>
+          <span class="pbHelp" style="margin:0">default 0.50 / 0.25</span>
         </div>
       </div>
 
@@ -510,9 +510,11 @@
   const bSVal = panel.querySelector("#pbBonusSVal");
   const bReset = panel.querySelector("#pbBonusReset");
   const BONUS_DEF = 0.5;
+  const BONUS_DEF_R = 0.25;
   const setBonus = (key, v, save) => {
+    const def = key === "bonusReload" ? BONUS_DEF_R : BONUS_DEF;
     let n = Number(v);
-    if (!isFinite(n)) n = BONUS_DEF;
+    if (!isFinite(n)) n = def;
     n = Math.round(Math.max(0, Math.min(0.9, n)) * 100) / 100;
     CFG[key] = n;
     const isR = key === "bonusReload";
@@ -538,7 +540,7 @@
     bSNum.addEventListener("change", () => setBonus("bonusSwap", bSNum.value, true));
   }
   if (bReset) bReset.addEventListener("click", () => {
-    setBonus("bonusReload", BONUS_DEF, false);
+    setBonus("bonusReload", BONUS_DEF_R, false);
     setBonus("bonusSwap", BONUS_DEF, true);
   });
   setBonus("bonusReload", CFG.bonusReload, false);
