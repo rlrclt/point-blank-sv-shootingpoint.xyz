@@ -114,11 +114,15 @@ if (ws.switchTimer > swapMs/1000) {
 
 ## 6) Stat / upgrade (avatarCombat-Cn0Sf-BG.js)
 
-field สะสม:
+สามชื่อนี้เป็น **ค่าโบนัสจากไอเทม/ตัวละคร** ไม่ใช่ตัวจับเวลาเอง
+(ชื่อ `reloadTime` ชนกับ `reloadTime` ของ weapon system ที่เป็น "วินาที" — ระวัง)
+
+field สะสมในออบเจ็กต์โบนัส (`Qn()`):
 ```
-reloadTime     // ลดเวลา reload
-quickChange    // เปิดทางลดเวลาเปลี่ยนปืน
-swapTime       // ลดเวลาเปลี่ยนปืน
+reloadTime     // โบนัสลดเวลา reload (สัดส่วน 0..1)
+quickChange    // "ธง" ว่ามีไอเทมที่เปิดโบนัสเปลี่ยนปืนหรือยัง (>0 = เปิด)
+swapTime       // โบนัสลดเวลาเปลี่ยนปืน (สัดส่วน 0..1)
+fastReload{}   // โบนัส reload แยกตาม family ของปืน
 ```
 event ที่บวกค่า:
 ```
@@ -126,11 +130,29 @@ WeaponReloadTime -> reloadTime += u
 WeaponSwapTime   -> swapTime   += u
 QuickChangeWeapon-> quickChange += u
 ```
-สูตร:
+
+สูตรจริง:
 ```js
-reloadMul = max(0.1, 1 - reloadTime)
-swapMul   = quickChange > 0 ? max(0.1, 1 - swapTime) : 1
+// reload ต่อ family (On)
+reloadMul[family] = max(0.1, 1 - reloadTime)          // เร็วสุด 10x
+// swap (Mn)
+swapMul = quickChange > 0 ? max(0.1, 1 - swapTime) : 1
+// รวมกับ beret
+changeMul = max(1/2.3, (beretQuickChange ? 1/1.50002 : 1) * swapMul)
+reloadMulF = (beretQuickReload ? 1/1.25 : 1) * (reloadMul[family] ?? 1)
 ```
+
+ความหมายสั้น ๆ:
+- **`swapTime`** = ยิ่งมาก เปลี่ยนปืนยิ่งเร็ว (1.0 = เร็วสุด 10 เท่า, แต่ติดเพดาน `max(0.1, …)`)
+- **`quickChange`** = ประตู: ถ้า 0 → `swapTime` ไม่ถูกใช้เลย (ตัวคูณ = 1)
+- **`reloadTime`** = ลดเวลา reload (ใช้กับ family ที่อยู่ใน `fastReload`)
+
+ของจริงที่เดินเวลา:
+```
+weapon system: switchTimer / switchTotal   (เปลี่ยนปืน)
+weapon system: reloadTimer / reloadDuration (reload)
+```
+`esp.js` fast swap ย่อ `switchTimer` ตรง ๆ จึงไม่ต้องยุ่งกับค่าโบนัสพวกนี้
 
 ---
 
