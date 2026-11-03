@@ -154,6 +154,41 @@ weapon system: reloadTimer / reloadDuration (reload)
 ```
 `esp.js` fast swap ย่อ `switchTimer` ตรง ๆ จึงไม่ต้องยุ่งกับค่าโบนัสพวกนี้
 
+### ถ้าจะทำฟีเจอร์สาย stat (ไม่ต้องใส่ออบเจ็กต์)
+
+ค่าโบนัสถูกประกอบใหม่ทุกครั้งที่เปลี่ยนตัวละคร/ไอเทม (`setPartAbilities` ถูกเรียกซ้ำ)
+จึงเขียนทับได้ที่ **instance** — แต่ต้อง re-apply หลังเปลี่ยนอุปกรณ์/เกิดใหม่
+
+ตำแหน่งจริง:
+```
+pb.weapons.ws.abilities   // ออบเจ็กต์โบนัส (อาจเป็น null)
+pb.weapons.ws.itemFx      // effect legacy (quickChangeWeapon, beretQuickChange, ...)
+```
+
+```js
+function applyBonus(ws, v) {           // v = 0..0.9
+  const a = ws.abilities;
+  if (a) {
+    a.quickChange = 1;                 // ต้อง > 0 ไม่งั้น swapTime ไม่มีผล
+    a.swapTime = v;
+    a.reloadTime = v;                  // มีผลเฉพาะ family ใน a.fastReload
+    if (a.fastReload) for (const k of Object.keys(a.fastReload)) a.fastReload[k] = 1;
+  }
+  if (ws.itemFx) {                     // ทาง legacy (abilities = null)
+    ws.itemFx.quickChangeWeapon = 1;
+    ws.itemFx.quickChangeReload = 1;
+    ws.itemFx.beretQuickChange = 1;
+    ws.itemFx.beretFastReload = 1;
+  }
+}
+```
+
+ข้อควรระวัง:
+- `abilities` ถูกแทนที่เมื่อเปลี่ยนอุปกรณ์ → ต้องเรียกซ้ำ (ทุกเฟรม/หลัง event)
+- `fastReload` ว่าง = ไม่มี reload bonus แม้ตั้ง `reloadTime` (เพราะ `On()` วนเฉพาะ key ที่มี)
+- **อย่า** แก้ `q` / `ci` (ค่าคงที่เกมถูก freeze + hash → `const-tamper`)
+- ทางที่เสถียรกว่า stat: clamp `switchTimer` / `reloadTimer` ตรง ๆ
+
 ---
 
 ## 7) ดาเมจ (`pbConfig-BTAdk4SQ.js`)
