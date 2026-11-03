@@ -34,6 +34,7 @@
     humanYawAmp: 0.18,
     humanReturnMs: 110,
     humanSpreadDeg: 0.06,
+    humanNet: 0.35,   // องศา: สะบัดที่ "เน็ตเวิร์กเห็น" (คนดู/สเปกเห็น) 0 = ปิด
     // Aimbot
     aimAssist: true,   // เปิด/ปิด (F7)
     aimMode: "bot",  // "bot" = aimbot เต็มตัว (ล็อคอัตโนมัติ) | "assist" = assist เดิม (ต้องลากใกล้เอง)
@@ -62,7 +63,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.19";
+  const VERSION = "v1.20";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -197,7 +198,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.19</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.20</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -224,6 +225,10 @@
         </div>
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
+        <label style="display:block;font-size:10px;color:#9ab">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
+          <input type="range" id="pbHumanNet" min="0" max="1.5" step="0.05" value="0.35" style="width:100%">
+        </label>
+        <div class="pbHelp">ใส่ offset เล็ก ๆ ลง pitch/yaw จริงหลังยิง → คนที่สเปกดูเห็นปืนสะบัด ไม่นิ่งผิดปกติ (0 = ปิด)</div>
         <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
         <label style="display:block;font-size:10px;color:#9ab">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
           <input type="range" id="pbSprLvl" min="0" max="100" step="5" value="100" style="width:100%">
@@ -462,6 +467,18 @@
     sprLvl.addEventListener("input", () => {
       CFG.spreadLevel = +sprLvl.value;
       if (sprLvlVal) sprLvlVal.textContent = sprLvl.value;
+      saveCfg();
+    });
+  }
+
+  const hn = panel.querySelector("#pbHumanNet");
+  const hnVal = panel.querySelector("#pbHumanNetVal");
+  if (hn) {
+    hn.value = CFG.humanNet == null ? 0.35 : CFG.humanNet;
+    if (hnVal) hnVal.textContent = hn.value;
+    hn.addEventListener("input", () => {
+      CFG.humanNet = +hn.value;
+      if (hnVal) hnVal.textContent = hn.value;
       saveCfg();
     });
   }
@@ -1775,6 +1792,11 @@
     lastShot: 0,     // timestamp ล่าสุดที่ยิง (ms)
     shotSeq: 0,      // ลำดับกระสุนในชุด
   };
+  /* Network-visible jitter: spectators read the target's s.pitch/s.yaw, so a
+     perfectly still no-recoil gun looks impossible. This adds a small,
+     decaying offset to the real state after the shot — the local view-model
+     kick above is invisible to anyone else. */
+  const netState = { p: 0, y: 0, ap: 0, ay: 0 };
 
   // เรียกเมื่อยิงกระสุน 1 ลูก — สร้าง visual kick (ไม่แตะ state จริง)
   function humanOnShot() {
@@ -1791,10 +1813,39 @@
     humanState.pitch += CFG.humanPitchAmp * seqFactor + randGauss(CFG.humanPitchAmp * 0.15);
     humanState.yaw += randGauss(CFG.humanYawAmp * seqFactor);
     humanState.fakeSpread = Math.max(humanState.fakeSpread, Math.abs(randGauss(CFG.humanSpreadDeg)));
+
+    const amp = Math.max(0, Math.min(1.5, Number(CFG.humanNet) || 0));
+    if (amp > 0) {
+      netState.p += amp * (0.45 + 0.15 * seqFactor) + randGauss(amp * 0.18);
+      netState.y += randGauss(amp * 0.35);
+    }
   }
 
   // เรียกทุกเฟรม — ลด offset กลับแบบ exponential (ไม่แตะกล้อง/player)
   function humanTick(pb, dt) {
+    /* network-visible jitter first: it must work even with the local visual
+       humanization off, because it is what a spectator sees. */
+    const amp = Math.max(0, Math.min(1.5, Number(CFG.humanNet) || 0));
+    if (CFG.noRecoil && amp > 0) {
+      const st = (pb && pb.me && typeof pb.me.pitch === "number") ? pb.me
+        : (pb.player && (pb.player.s || pb.player)) || null;
+      if (st && typeof st.pitch === "number") {
+        const dp = netState.p - netState.ap;
+        const dy = netState.y - netState.ay;
+        if (dp || dy) {
+          st.pitch = Math.max(-1.4, Math.min(1.4, st.pitch + dp * DEG));
+          st.yaw = (Number(st.yaw) || 0) + dy * DEG;
+          netState.ap = netState.p;
+          netState.ay = netState.y;
+        }
+      }
+      const k = Math.exp(-dt / 0.14);
+      netState.p *= k;
+      netState.y *= k;
+    } else if (netState.p || netState.y) {
+      netState.p = 0; netState.y = 0; netState.ap = 0; netState.ay = 0;
+    }
+
     if (!CFG.humanize || !CFG.noRecoil) {
       humanState.pitch = 0;
       humanState.yaw = 0;
