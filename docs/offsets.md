@@ -204,6 +204,12 @@ function applyBonus(ws, v) {           // v = 0..0.9
 > v1.14 เปลี่ยนกลไกโบนัสจาก "เขียน abilities" เป็น **instance hook** บน `ws.changeTimeOf` / `ws.reloadTimeOf`
 > คำนวณจาก `def.params.changeTime|reloadTime` ตรง ๆ: `time * (1 - bonus)` (ต่ำสุด 0.1)
 > ทำให้สไลเดอร์มีผลจริงแม้ไม่มีไอเทม และไม่ถูก `setPartAbilities()` เขียนทับ
+>
+> **ค่าจริงในตาราง `PC_EQUIP` (1174 ไอเทม, ตรวจจาก `avatarData-DnSaiZ_m.json`)**
+> - `WeaponSwapTime` = **0.5** (15 ไอเทม) พร้อม `QuickChangeWeapon` = **1** → swap 2× (เพดานเกม 2.3×)
+> - `WeaponReloadTime` = **0.25** (53 ไอเทม) + `FastReload_<family>` → reload ~1.33× (มีเบเร่ต์ได้ ~1.67×)
+> - `FastReload_Assault/MG/Pistol/SG/SMG/Sniper` ครอบ family ละ 42–47 ไอเทม
+> - ค่า default ของสไลเดอร์จึงตั้งเป็น swap **0.50** / reload **0.25** ตามของจริง
 
 ---
 
