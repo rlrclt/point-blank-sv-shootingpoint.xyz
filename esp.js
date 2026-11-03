@@ -40,6 +40,9 @@
     aimBone: "head", // "head" | "neck" | "chest" | "pelvis" | "auto"
     aimVisibleOnly: true,   // ไม่ล็อคทะลุกำแพง (raycast จริง)
     aimDrawFov: true,   // วาดวงกลม FOV
+    aimDrawLock: true,  // วาดจุดล็อค (วงกลม/กากบาทที่ joint)
+    aimDrawLink: true,  // เส้นจากกลางจอไปจุดล็อค
+    aimDrawPart: false, // แสดงชื่อส่วนที่ล็อค (head/body/arm/...)
     aimOnHold: false,  // true = ต้องกดปุ่มค้างเพื่อ aim / false = auto ตลอด
     aimPriority: "angle",// "angle" = ใกล้ crosshair มากที่สุด | "dist" = ระยะใกล้ตัวที่สุด
     aimHoldButton: "rmb", // ปุ่มที่ต้องกดค้าง: rmb | mmb | lmb | shift | caps
@@ -50,7 +53,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.8";
+  const VERSION = "v1.9";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -225,6 +228,9 @@
         </label>
         <div class="pbHelp">คลิกปุ่มแล้วกดปุ่ม/เมาส์ที่ต้องการค้างเพื่อ aim (Esc ยกเลิก)</div>
         <label><input type="checkbox" data-c="aimDrawFov"> วาดวงกลม FOV</label>
+        <label><input type="checkbox" data-c="aimDrawLock"> วาดจุดล็อค (bone)</label>
+        <label><input type="checkbox" data-c="aimDrawLink"> เส้นจาก crosshair ไปจุดล็อค</label>
+        <label><input type="checkbox" data-c="aimDrawPart"> แสดงส่วนที่ล็อค (head/body/...)</label>
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:3px">
           <label style="font-size:10px;color:#9ab">FOV: <span id="pbFovVal">${CFG.aimFov}</span>°
             <input type="range" id="pbFovSlider" min="1" max="180" step="1"
@@ -751,6 +757,8 @@
   /* ---------- เลือกจุดเล็ง: เอาจุดที่ "เห็นจริง" ตามลำดับความสำคัญ ---------- */
   // cache ตัวที่เลือกไว้ ~50ms (จุด world อัปเดตทุกเฟรม แต่ raycast ไม่ต้องยิงทุกเฟรม)
   const _choiceCache = new WeakMap();
+  /* which body part the last successful resolve picked (for the optional label) */
+  let _lastAimPart = "";
   const AIM_VIS_REFRESH_MS = 60;
 
   function resolveAimCandidate(pb, cam, a, mode, out) {
@@ -771,6 +779,7 @@
         // re-check visibility (cache อาจ stale ถ้าเป้าหลบหลังกำแพง)
         const vis = pointVisible(pb, cam, out[0], out[1], out[2]);
         if (vis === true || (vis === null && a && a.occluded !== true)) {
+          _lastAimPart = ce.cand.zone || mode;
           return true;
         }
         _choiceCache.delete(a);
@@ -825,6 +834,7 @@
         // null = raycast ตรวจไม่ได้ → ยอมรับเฉพาะเมื่อเกมยังไม่ยืนยันว่า "โดนบังครบทั้งตัว"
         if (vis === null && a && a.occluded === true) continue;
         _choiceCache.set(a, { t: now, mode, cands, cand: it.c });
+        _lastAimPart = it.c.zone || mode;
         return true;
       }
     }
@@ -849,6 +859,7 @@
         : mode === "pelvis" ? (crouch ? 0.55 : 0.98)
           : (crouch ? 0.78 : 1.25);
     out[0] = actorPos[0]; out[1] = actorPos[1] + h; out[2] = actorPos[2];
+    _lastAimPart = mode;
 
     if (CFG.aimVisibleOnly && !isTargetVisible(pb, cam, out[0], out[1], out[2], a)) return false;
     return true;
@@ -1289,6 +1300,7 @@
     lockedId: null,
     lockedActor: null,
     lockAim: null,
+    part: "",
     lockSince: 0,
     // feedforward (เป้าเดิน) — เก็บ absolute target angle ต่อเฟรม
     track: null,     // { actor, pitch, yaw, t }
@@ -1384,6 +1396,7 @@
 
     // เก็บจุดเล็งไว้ให้ drawOnce วาด indicator (canvas ถูก clear หลัง render)
     aimState.lockAim = [...target.aim];
+    aimState.part = _lastAimPart;
   }
 
   // ─── helper: วาด FOV circle ───
@@ -2020,26 +2033,41 @@
       const sp = project(aimState.lockAim[0], aimState.lockAim[1], aimState.lockAim[2], cam);
       if (sp) {
         ctx.save();
-        ctx.globalAlpha = CFG.aimMode === "bot" ? 0.8 : 0.4;
-        ctx.strokeStyle = CFG.aimMode === "bot" ? "#ff2020" : "#ff4fff";
+        const col = CFG.aimMode === "bot" ? "#ff2020" : "#ff4fff";
+        ctx.strokeStyle = col;
+        ctx.fillStyle = col;
         ctx.lineWidth = (CFG.aimMode === "bot" ? 1.5 : 1) * dpr;
-        ctx.beginPath();
-        ctx.moveTo(cv.width / 2, cv.height / 2);
-        ctx.lineTo(sp.x, sp.y);
-        ctx.stroke();
 
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = CFG.aimMode === "bot" ? "#ff2020" : "#ff4fff";
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, (CFG.aimMode === "bot" ? 5 : 3) * dpr, 0, Math.PI * 2);
-        ctx.fill();
+        /* each element has its own switch: the marker is useful while tuning
+           and pure noise while actually playing */
+        if (CFG.aimDrawLink !== false) {
+          ctx.globalAlpha = CFG.aimMode === "bot" ? 0.8 : 0.4;
+          ctx.beginPath();
+          ctx.moveTo(cv.width / 2, cv.height / 2);
+          ctx.lineTo(sp.x, sp.y);
+          ctx.stroke();
+        }
 
-        if (CFG.aimMode === "bot") {
+        if (CFG.aimDrawLock !== false) {
+          ctx.globalAlpha = 0.95;
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, (CFG.aimMode === "bot" ? 5 : 3) * dpr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (CFG.aimMode === "bot" && CFG.aimDrawLock !== false) {
           ctx.globalAlpha = 1;
-          ctx.fillStyle = "#ff2020";
           ctx.font = `bold ${10 * dpr}px monospace`;
           ctx.textAlign = "center";
           ctx.fillText("LOCK", sp.x, sp.y - 8 * dpr);
+          ctx.textAlign = "start";
+        }
+
+        if (CFG.aimDrawPart) {
+          ctx.globalAlpha = 0.95;
+          ctx.font = `bold ${10 * dpr}px monospace`;
+          ctx.textAlign = "left";
+          ctx.fillText(String(aimState.part || "?"), sp.x + 8 * dpr, sp.y - 6 * dpr);
           ctx.textAlign = "start";
         }
         ctx.restore();
