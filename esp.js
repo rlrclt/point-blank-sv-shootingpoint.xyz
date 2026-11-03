@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.13";
+  const VERSION = "v1.14";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -195,7 +195,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.13</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.14</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -2523,47 +2523,52 @@
   setInterval(loadEquip, 3000);
   setInterval(updateBonusCalc, 500);
 
+  /* ───── stat bonus (instance hooks) ─────
+     The `abilities` route depends on the game's own item tables and is replaced
+     on every equip change. Instead we shadow the two methods the weapon system
+     itself calls when a swap/reload starts — on the INSTANCE only, never a
+     prototype and never a native function. Base time comes from the weapon
+     definition's raw params, so the result is deterministic:
+         change = def.params.changeTime * (1 - swapBonus)
+         reload = def.params.reloadTime * (1 - reloadBonus)
+     That is why the slider now bites even with no items equipped. */
+  function ensureBonusHooks(ws) {
+    if (!ws || ws.__pbtkBonusHooks) return;
+    try { Object.defineProperty(ws, "__pbtkBonusHooks", { value: 1, enumerable: false }); }
+    catch (e) { try { ws.__pbtkBonusHooks = 1; } catch (e2) {} }
+    const origC = typeof ws.changeTimeOf === "function" ? ws.changeTimeOf : null;
+    const origR = typeof ws.reloadTimeOf === "function" ? ws.reloadTimeOf : null;
+    if (origC) {
+      ws.changeTimeOf = function (def) {
+        if (!CFG.statBonus) return origC.call(this, def);
+        const base = Number(def && def.params && def.params.changeTime);
+        const sb = swapBonusOf();
+        if (sb && isFinite(base) && base > 0) {
+          const s = Math.max(0, Math.min(0.9, sb.s));
+          return base * (sb.qc ? Math.max(0.1, 1 - s) : 1);
+        }
+        return origC.call(this, def);
+      };
+    }
+    if (origR) {
+      ws.reloadTimeOf = function (def) {
+        if (!CFG.statBonus) return origR.call(this, def);
+        const base = Number(def && def.params && def.params.reloadTime);
+        const rb = reloadBonusOf();
+        if (rb && isFinite(base) && base > 0) {
+          const r = Math.max(0, Math.min(0.9, rb.r));
+          return base * Math.max(0.1, 1 - r);
+        }
+        return origR.call(this, def);
+      };
+    }
+  }
+
   function bonusTick(pb) {
     if (!CFG.statBonus) return;
-    const sb = swapBonusOf();
-    const rb = reloadBonusOf();
-    if (!sb && !rb) return;
     const ws = weaponSystemOf(pb);
     if (!ws) return;
-
-    const a = ws.abilities;
-    if (a && typeof a === "object" && !Object.isFrozen(a)) {
-      if (sb) {
-        a.quickChange = sb.qc ? 1 : 0;   // gate: swapTime only counts when > 0
-        a.swapTime = Math.min(0.9, Math.max(0, sb.s));
-      }
-      if (rb) {
-        a.reloadTime = Math.min(0.9, Math.max(0, rb.r));
-        if (!a.fastReload || typeof a.fastReload !== "object") a.fastReload = {};
-        if (!rb.fr) {
-          for (const slot of (ws.slots || [])) {
-            const def = slot && slot.def;
-            const fam = def && (def.family || (def.params && def.params.family));
-            if (fam) a.fastReload[fam] = 1;
-          }
-        } else {
-          for (const k of Object.keys(rb.fr)) a.fastReload[k] = rb.fr[k];
-        }
-      }
-    }
-    /* itemFx is only the legacy path (abilities === null). Only the CUSTOM
-       side writes flags; an item profile must not add bonuses it lacks. */
-    const fx = ws.itemFx;
-    if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
-      if (CFG.swapProfile === "custom") {
-        fx.quickChangeWeapon = 1;
-        fx.beretQuickChange = 1;
-      }
-      if (CFG.reloadProfile === "custom") {
-        fx.quickChangeReload = 1;
-        fx.beretFastReload = 1;
-      }
-    }
+    ensureBonusHooks(ws);
   }
 
   function hookRenderer() {
