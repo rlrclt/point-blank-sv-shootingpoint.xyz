@@ -39,6 +39,8 @@
     aimSmooth: 6.0,    // smoothness: ยิ่งสูง = กล้องเข้าหาเป้าเร็วขึ้น (1=นุ่มสุด, 20=เกือบ snap)
     aimBone: "head", // "head" | "neck" | "chest" | "pelvis" | "auto"
     aimVisibleOnly: true,   // ไม่ล็อคทะลุกำแพง (raycast จริง)
+    fastSwap: false,        // เปลี่ยนปืนเร็ว
+    swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
     aimDrawFov: true,   // วาดวงกลม FOV
     aimDrawLock: true,  // วาดจุดล็อค (วงกลม/กากบาทที่ joint)
     aimDrawLink: true,  // เส้นจากกลางจอไปจุดล็อค
@@ -188,7 +190,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.8 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.9 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
     </div>
     <div id="pbBody">
       <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
@@ -231,6 +233,21 @@
         <label><input type="checkbox" data-c="aimDrawLock"> วาดจุดล็อค (bone)</label>
         <label><input type="checkbox" data-c="aimDrawLink"> เส้นจาก crosshair ไปจุดล็อค</label>
         <label><input type="checkbox" data-c="aimDrawPart"> แสดงส่วนที่ล็อค (head/body/...)</label>
+        <div style="border-top:1px solid #2a3140;margin:4px 0;padding-top:4px">
+          <label><input type="checkbox" data-c="fastSwap"> เปลี่ยนปืนเร็ว (Fast Swap)</label>
+          <div class="pbHelp">ย่อเวลาเปลี่ยนปืนเหลือค่าที่ตั้ง (เฉพาะตอนกำลังเปลี่ยนปืน)</div>
+          <label style="font-size:10px;color:#9ab">Swap time: <span id="pbSwapVal">250</span> ms
+            <input type="range" id="pbSwapSlider" min="50" max="1500" step="10"
+              value="250" style="width:100%;margin-top:2px">
+          </label>
+          <div style="display:flex;gap:4px;align-items:center;margin-top:2px">
+            <input type="number" id="pbSwapNum" min="50" max="1500" step="10" value="250"
+              style="width:78px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
+            <button id="pbSwapReset" type="button"
+              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">RESET</button>
+            <span class="pbHelp" style="margin:0">default 250 ms</span>
+          </div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:3px">
           <label style="font-size:10px;color:#9ab">FOV: <span id="pbFovVal">${CFG.aimFov}</span>°
             <input type="range" id="pbFovSlider" min="1" max="180" step="1"
@@ -384,8 +401,34 @@
       saveCfg();
     });
   }
-  const boneSelect = panel.querySelector("#pbBoneSelect");
-  if (boneSelect) {
+  /* fast weapon swap — slider, typed number, reset */
+  const swapSlider = panel.querySelector("#pbSwapSlider");
+  const swapNum = panel.querySelector("#pbSwapNum");
+  const swapVal = panel.querySelector("#pbSwapVal");
+  const swapReset = panel.querySelector("#pbSwapReset");
+  const SWAP_DEF = 250;
+  const setSwapMs = (v, save) => {
+    let n = Math.round(Number(v));
+    if (!isFinite(n)) n = SWAP_DEF;
+    n = Math.max(50, Math.min(1500, n));
+    CFG.swapMs = n;
+    if (swapSlider) swapSlider.value = n;
+    if (swapNum) swapNum.value = n;
+    if (swapVal) swapVal.textContent = n;
+    if (save) saveCfg();
+  };
+  if (swapSlider) swapSlider.addEventListener("input", () => setSwapMs(swapSlider.value, true));
+  if (swapNum) {
+    swapNum.addEventListener("input", () => { if (swapNum.value !== "") setSwapMs(swapNum.value, false); });
+    swapNum.addEventListener("change", () => setSwapMs(swapNum.value, true));
+    swapNum.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); setSwapMs(swapNum.value, true); swapNum.blur(); }
+    });
+  }
+  if (swapReset) swapReset.addEventListener("click", () => setSwapMs(SWAP_DEF, true));
+  setSwapMs(CFG.swapMs, false);
+
+  const boneSelect = panel.querySelector("#pbBoneSelect");  if (boneSelect) {
     boneSelect.value = CFG.aimBone;
     boneSelect.addEventListener("change", () => { CFG.aimBone = boneSelect.value; saveCfg(); });
   }
@@ -2194,6 +2237,34 @@
      (ไซต์ .th ไม่มีระบบตรวจ hook แบบ AC ของ .app จึงแนบปลอดภัย) */
   let activeR = null;
   let _lastAimFrame = -1;
+  /* ───── fast weapon swap ─────
+     The weapon system keeps `switchTimer` (seconds remaining) and `switchTotal`
+     (the duration the HUD animates over). Clamping the timer the moment a swap
+     starts shortens the remaining draw time without touching any weapon stat,
+     so it works even when the class name is minified. */
+  function weaponSystemOf(pb) {
+    const list = [
+      pb?.weapons?.ws, pb?.weapons,
+      pb?.player?.weapons, pb?.player?.weaponSystem, pb?.player?.ws, pb?.ws
+    ];
+    for (const w of list) {
+      if (w && typeof w === "object" && typeof w.switchTimer === "number") return w;
+    }
+    return null;
+  }
+  function fastSwapTick(pb) {
+    if (!CFG.fastSwap) return;
+    const ws = weaponSystemOf(pb);
+    if (!ws) return;
+    const max = Math.max(0.05, (Number(CFG.swapMs) || 250) / 1000);
+    const t = Number(ws.switchTimer);
+    if (isFinite(t) && t > max) {
+      ws.switchTimer = max;
+      const tot = Number(ws.switchTotal);
+      if (isFinite(tot) && tot > max) ws.switchTotal = max;
+    }
+  }
+
   function hookRenderer() {
     const R = window.__pbR;
     if (!R || typeof R.render !== "function") return false;
@@ -2212,6 +2283,7 @@
         if (typeof fn !== "number" || fn !== _lastAimFrame) {
           _lastAimFrame = fn;
           aimAssistTick(pbNow, camera);
+          fastSwapTick(pbNow);
         }
       }
 
@@ -2258,6 +2330,7 @@
     const pb = window.__pb;
     const cam = pb?.player?.camera;
     if (pb && cam) aimAssistTick(pb, cam);
+    if (pb) fastSwapTick(pb);
       drawOnce(pb?.scene, cam);
   })();
 
