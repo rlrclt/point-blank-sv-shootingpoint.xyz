@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.15";
+  const VERSION = "v1.16";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -195,7 +195,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.15</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.16</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -336,7 +336,7 @@
     #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:238px;
       background:#0b0d10;border:1px solid #262c33;border-radius:0;
       font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#dfe5ec;user-select:none;
-      box-shadow:0 14px 34px #000b;}
+      box-shadow:0 14px 34px #000b;overflow:hidden;}
     #pbEspPanel #pbh{display:flex;justify-content:space-between;align-items:center;
       padding:8px 10px;background:#0f1216;border-bottom:1px solid #262c33;cursor:grab;
       font:700 10.5px 'Segoe UI';letter-spacing:2px;text-transform:uppercase;color:#f5a623;}
@@ -374,7 +374,34 @@
     #pbEspPanel .pbHelp{font-size:9px;color:#6f7f96;line-height:1.4;margin:0;padding:0 10px 5px;}
     #pbBtnChip{position:fixed;right:10px;top:56px;z-index:2147483001;padding:4px 10px;
       background:#0b0d10;color:#f5a623;font:700 11px 'Segoe UI';border:1px solid #262c33;
-      border-radius:0;letter-spacing:1px;} `;
+      border-radius:0;letter-spacing:1px;}
+    /* ---- motion / effects (CSS only, cheap) ---- */
+    @keyframes pbIn{from{opacity:0;transform:translateY(-7px) scale(.985)}to{opacity:1;transform:none}}
+    #pbEspPanel.pb-in{animation:pbIn .18s cubic-bezier(.2,.7,.3,1)}
+    @keyframes pbScan{0%{transform:translateY(-120%)}100%{transform:translateY(1400%)}}
+    #pbEspPanel::after{content:"";position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
+      background:linear-gradient(180deg,rgba(245,166,35,.07),transparent);
+      animation:pbScan 7s linear infinite;}
+    @keyframes pbPulse{0%,100%{box-shadow:0 0 0 rgba(245,166,35,0)}50%{box-shadow:0 0 10px rgba(245,166,35,.55)}}
+    #pbEspPanel .pbSec{border-left:2px solid #f5a623;animation:pbPulse 2.8s ease-in-out infinite;}
+    #pbEspPanel #pbTabs button{transition:color .15s,background .15s,border-color .15s}
+    #pbEspPanel #pbTabs button.on{box-shadow:inset 0 -1px 0 #f5a623, 0 0 10px rgba(245,166,35,.18)}
+    #pbEspPanel label{transition:background .12s}
+    #pbEspPanel label:hover{background:rgba(245,166,35,.05)}
+    #pbEspPanel label input[type=checkbox]{transition:box-shadow .15s,transform .1s}
+    #pbEspPanel label input[type=checkbox]:active{transform:scale(.88)}
+    #pbEspPanel label input[type=checkbox]:checked{box-shadow:0 0 7px rgba(245,166,35,.55)}
+    #pbEspPanel input[type=range]::-webkit-slider-thumb{transition:box-shadow .15s,transform .1s}
+    #pbEspPanel input[type=range]:active::-webkit-slider-thumb{box-shadow:0 0 10px rgba(245,166,35,.8);transform:scaleY(1.15)}
+    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{transition:border-color .15s,color .15s,background .15s}
+    #pbEspPanel button:active{transform:translateY(1px)}
+    #pbEspPanel #pbStatus{position:relative;padding-left:20px;}
+    #pbEspPanel #pbStatus::before{content:"";position:absolute;left:9px;top:50%;width:5px;height:5px;
+      margin-top:-2.5px;background:#7be38a;animation:pbBlink 1.6s steps(1) infinite;}
+    @keyframes pbBlink{0%,55%{opacity:1}56%,100%{opacity:.25}}
+    @media (prefers-reduced-motion: reduce){
+      #pbEspPanel *,#pbEspPanel::after{animation:none!important;transition:none!important}
+    } `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
   (document.body || document.documentElement).appendChild(panel);
@@ -587,6 +614,13 @@
      Insert is the only way back (that is the point of the hotkey). */
   const setMenu = (show) => {
     panel.style.display = show ? "" : "none";
+    if (show) {
+      try {
+        panel.classList.remove("pb-in");
+        void panel.offsetWidth;          /* restart the entrance animation */
+        panel.classList.add("pb-in");
+      } catch (e) {}
+    }
     chip.style.display = "none";
     try { localStorage.setItem("pbEspMenu", show ? "1" : "0"); } catch (_) {}
   };
