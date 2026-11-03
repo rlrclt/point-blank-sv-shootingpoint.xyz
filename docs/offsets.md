@@ -195,6 +195,9 @@ function applyBonus(ws, v) {           // v = 0..0.9
 > v1.11 เพิ่ม **โปรไฟล์ไอเท็ม**: อ่าน `PC_EQUIP` จาก `avatarData-*.json` ที่หน้าโหลดอยู่แล้ว
 > (ผ่าน `performance.getEntriesByType("resource")`) แล้วเลือกไอเท็ม → ใช้ค่า `WeaponSwapTime` / `WeaponReloadTime` / `QuickChangeWeapon` / `FastReload_*` ของไอเท็มนั้นตรง ๆ
 > พร้อมอ่านค่าตัวคูณที่จะได้ (swap ×… / reload ×…)
+>
+> v1.12 แยกโปรไฟล์เป็น **สับไว (swap)** และ **รีโหลดไว (reload)** คนละ dropdown
+> และเปลี่ยน GUI เป็นแท็บ `CORE / AIM / WEAPON / ESP` สไตล์ minimal-tech (มุมเหลี่ยม, เส้น 1px, accent ทอง)
 
 ---
 
