@@ -200,6 +200,10 @@ function applyBonus(ws, v) {           // v = 0..0.9
 > และเปลี่ยน GUI เป็นแท็บ `CORE / AIM / WEAPON / ESP` สไตล์ minimal-tech (มุมเหลี่ยม, เส้น 1px, accent ทอง)
 >
 > v1.13 เลือกโปรไฟล์ไอเท็มแล้ว **seed ค่าลงสไลเดอร์ "กำหนดเอง"** ให้อัตโนมัติ → สลับไป custom เพื่อจูนต่อได้ทันที
+>
+> v1.14 เปลี่ยนกลไกโบนัสจาก "เขียน abilities" เป็น **instance hook** บน `ws.changeTimeOf` / `ws.reloadTimeOf`
+> คำนวณจาก `def.params.changeTime|reloadTime` ตรง ๆ: `time * (1 - bonus)` (ต่ำสุด 0.1)
+> ทำให้สไลเดอร์มีผลจริงแม้ไม่มีไอเทม และไม่ถูก `setPartAbilities()` เขียนทับ
 
 ---
 
