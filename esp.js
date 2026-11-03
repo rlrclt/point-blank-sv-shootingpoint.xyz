@@ -63,7 +63,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.20";
+  const VERSION = "v1.21";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -198,7 +198,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.20</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.21</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -215,7 +215,9 @@
         <div class="pbSec">Recoil</div>
         <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด (F9)</label>
         <label style="display:block;font-size:10px;color:#9ab">ระดับลดแรงดีด: <b id="pbRecLvlVal">100</b>%
-          <input type="range" id="pbRecLvl" min="0" max="100" step="5" value="100" style="width:100%">
+          <input type="range" id="pbRecLvl" min="0" max="100" step="1" value="100" style="width:100%">
+          <input type="number" id="pbRecLvlNum" min="0" max="100" step="1" value="100"
+            style="width:70px;background:#0f1317;color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น</div>
         <div id="pbCompRow" style="display:none">
@@ -231,7 +233,9 @@
         <div class="pbHelp">ใส่ offset เล็ก ๆ ลง pitch/yaw จริงหลังยิง → คนที่สเปกดูเห็นปืนสะบัด ไม่นิ่งผิดปกติ (0 = ปิด)</div>
         <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
         <label style="display:block;font-size:10px;color:#9ab">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
-          <input type="range" id="pbSprLvl" min="0" max="100" step="5" value="100" style="width:100%">
+          <input type="range" id="pbSprLvl" min="0" max="100" step="1" value="100" style="width:100%">
+          <input type="number" id="pbSprLvlNum" min="0" max="100" step="1" value="100"
+            style="width:70px;background:#0f1317;color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0)</div>
       </div>
@@ -450,26 +454,49 @@
   }
   const recLvl = panel.querySelector("#pbRecLvl");
   const recLvlVal = panel.querySelector("#pbRecLvlVal");
-  if (recLvl) {
-    recLvl.value = CFG.recoilLevel == null ? 100 : CFG.recoilLevel;
-    if (recLvlVal) recLvlVal.textContent = recLvl.value;
-    recLvl.addEventListener("input", () => {
-      CFG.recoilLevel = +recLvl.value;
-      if (recLvlVal) recLvlVal.textContent = recLvl.value;
-      saveCfg();
+  const recLvlNum = panel.querySelector("#pbRecLvlNum");
+  const setRecLvl = (v, save) => {
+    let n = Math.round(Number(v));
+    if (!isFinite(n)) n = 100;
+    n = Math.max(0, Math.min(100, n));
+    CFG.recoilLevel = n;
+    if (recLvl) recLvl.value = n;
+    if (recLvlNum) recLvlNum.value = n;
+    if (recLvlVal) recLvlVal.textContent = n;
+    if (save) saveCfg();
+  };
+  if (recLvl) recLvl.addEventListener("input", () => setRecLvl(recLvl.value, true));
+  if (recLvlNum) {
+    recLvlNum.addEventListener("input", () => { if (recLvlNum.value !== "") setRecLvl(recLvlNum.value, false); });
+    recLvlNum.addEventListener("change", () => setRecLvl(recLvlNum.value, true));
+    recLvlNum.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); setRecLvl(recLvlNum.value, true); recLvlNum.blur(); }
     });
   }
+  setRecLvl(CFG.recoilLevel == null ? 100 : CFG.recoilLevel, false);
+
   const sprLvl = panel.querySelector("#pbSprLvl");
   const sprLvlVal = panel.querySelector("#pbSprLvlVal");
-  if (sprLvl) {
-    sprLvl.value = CFG.spreadLevel == null ? 100 : CFG.spreadLevel;
-    if (sprLvlVal) sprLvlVal.textContent = sprLvl.value;
-    sprLvl.addEventListener("input", () => {
-      CFG.spreadLevel = +sprLvl.value;
-      if (sprLvlVal) sprLvlVal.textContent = sprLvl.value;
-      saveCfg();
+  const sprLvlNum = panel.querySelector("#pbSprLvlNum");
+  const setSprLvl = (v, save) => {
+    let n = Math.round(Number(v));
+    if (!isFinite(n)) n = 100;
+    n = Math.max(0, Math.min(100, n));
+    CFG.spreadLevel = n;
+    if (sprLvl) sprLvl.value = n;
+    if (sprLvlNum) sprLvlNum.value = n;
+    if (sprLvlVal) sprLvlVal.textContent = n;
+    if (save) saveCfg();
+  };
+  if (sprLvl) sprLvl.addEventListener("input", () => setSprLvl(sprLvl.value, true));
+  if (sprLvlNum) {
+    sprLvlNum.addEventListener("input", () => { if (sprLvlNum.value !== "") setSprLvl(sprLvlNum.value, false); });
+    sprLvlNum.addEventListener("change", () => setSprLvl(sprLvlNum.value, true));
+    sprLvlNum.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); setSprLvl(sprLvlNum.value, true); sprLvlNum.blur(); }
     });
   }
+  setSprLvl(CFG.spreadLevel == null ? 100 : CFG.spreadLevel, false);
 
   const hn = panel.querySelector("#pbHumanNet");
   const hnVal = panel.querySelector("#pbHumanNetVal");
