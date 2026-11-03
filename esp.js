@@ -42,7 +42,8 @@
     fastSwap: false,        // เปลี่ยนปืนเร็ว
     swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
     statBonus: false,       // เปิดโบนัส reload/swap โดยไม่ต้องใส่ไอเทม
-    bonusProfile: "custom", // "custom" | "item:<id>" | "off"
+    swapProfile: "custom",  // "custom" | "item:<id>" | "off"
+    reloadProfile: "custom",// "custom" | "item:<id>" | "off"
     bonusReload: 0.5,       // 0..0.9 (ยิ่งมาก ยิ่งเร็ว)
     bonusSwap: 0.5,         // 0..0.9
     aimDrawFov: true,   // วาดวงกลม FOV
@@ -59,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.11";
+  const VERSION = "v1.12";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -194,161 +195,199 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.11 · กด Ins ซ่อน/เปิด</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.12</span><span id="pbX">×</span>
+    </div>
+    <div id="pbTabs">
+      <button data-tab="core">CORE</button>
+      <button data-tab="aim">AIM</button>
+      <button data-tab="weapon">WEAPON</button>
+      <button data-tab="esp">ESP</button>
     </div>
     <div id="pbBody">
-      <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
-      <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile (เข้าได้ทุกห้อง)</label>
-      <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด NoRecoil (F9)</label>
-      <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง (ตัวคูณ recoil) — ไม่เกี่ยวกับความแม่น</div>
-      <div id="pbCompRow" style="display:none;margin:2px 0 6px">
-        <label style="display:block">แรงชดเชยแนวตั้ง (ทดลอง) <b id="pbCompVal">0</b></label>
-        <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0" style="width:100%">
-        <div class="pbHelp">ไคลเอนต์นี้เป็น ES module — อ่านสถานะแรงดีดไม่ได้ จึงดันเมาส์ลงชดเชยแทนตอนยิง</div>
+
+      <div class="pbPane" data-pane="core">
+        <div class="pbSec">Movement / Spoof</div>
+        <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
+        <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
+        <div class="pbSec">Recoil</div>
+        <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด (F9)</label>
+        <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น</div>
+        <div id="pbCompRow" style="display:none">
+          <label>แรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
+          <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0">
+          <div class="pbHelp">ไคลเอนต์ ES module — อ่านสถานะแรงดีดไม่ได้ จึงดันเมาส์ลงชดเชยแทน</div>
+        </div>
+        <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
+        <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
+        <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
+        <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0)</div>
       </div>
-      <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
-      <div class="pbHelp">ใส่ kick หลอกที่ "กล้องตอน render" เท่านั้น (ใช้คู่ NoRecoil) — ไม่แตะการเล็ง/กระสุน/เน็ตเวิร์ก</div>
-      <label><input type="checkbox" data-c="noSpread"> กระสุนตรง NoSpread</label>
-      <div class="pbHelp">ตัดการกระจายกระสุน (deviation/xhPrev = 0) — คนละตัวกับ NoRecoil</div>
-      <div style="border-top:1px solid #2a3140;margin:3px 0;padding-top:4px">
-        <label><input type="checkbox" data-c="aimAssist"> 🎯 Aimbot (F7)</label>
-        <div style="display:flex;gap:4px;margin:3px 0">
-          <label style="font-size:10px;flex:1;text-align:center;cursor:pointer">
-            <input type="radio" name="aimMode" value="bot" ${CFG.aimMode === "bot" ? "checked" : ""}> Full Bot
-          </label>
-          <label style="font-size:10px;flex:1;text-align:center;cursor:pointer">
-            <input type="radio" name="aimMode" value="assist" ${CFG.aimMode === "assist" ? "checked" : ""}> Assist
-          </label>
+
+      <div class="pbPane" data-pane="aim" style="display:none">
+        <div class="pbSec">Aimbot</div>
+        <label><input type="checkbox" data-c="aimAssist"> เปิด Aimbot (F7)</label>
+        <div class="pbSeg">
+          <label><input type="radio" name="aimMode" value="bot" ${CFG.aimMode === "bot" ? "checked" : ""}> Full Bot</label>
+          <label><input type="radio" name="aimMode" value="assist" ${CFG.aimMode === "assist" ? "checked" : ""}> Assist</label>
         </div>
         <label><input type="checkbox" data-c="aimVisibleOnly"> ไม่ทะลุกำแพง</label>
         <label><input type="checkbox" data-c="aimOnHold"> กดปุ่มค้างเพื่อ aim</label>
         <label><input type="checkbox" data-c="aimLock"> ล็อกเป้า (Target Lock)</label>
-        <div class="pbHelp">รักษาเป้าเดิมเมื่อยังอยู่ใน FOV — ลดอาการสลับเป้า</div>
-        <label><input type="checkbox" data-c="aimSmartZone"> ยิงจุดที่เห็นจริง (Smart Zone)</label>
-        <div class="pbHelp">ถ้าส่วนที่เลือกโดนบัง → เลือกหัว/อก/แขนที่เห็นแทน</div>
-        <label style="font-size:10px;color:#9ab">Hold button:
-          <button id="pbHoldBind" type="button"
-            style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;margin-left:4px;padding:2px 8px;cursor:pointer;font-size:10px">
-            RMB
-          </button>
+        <div class="pbHelp">รักษาเป้าเดิมเมื่อยังอยู่ใน FOV</div>
+        <label><input type="checkbox" data-c="aimSmartZone"> Smart Zone</label>
+        <div class="pbHelp">ถ้าจุดที่เลือกโดนบัง → เลือกจุดที่เห็นแทน</div>
+        <label>Hold button
+          <button id="pbHoldBind" type="button">RMB</button>
         </label>
-        <div class="pbHelp">คลิกปุ่มแล้วกดปุ่ม/เมาส์ที่ต้องการค้างเพื่อ aim (Esc ยกเลิก)</div>
-        <label><input type="checkbox" data-c="aimDrawFov"> วาดวงกลม FOV</label>
-        <label><input type="checkbox" data-c="aimDrawLock"> วาดจุดล็อค (bone)</label>
-        <label><input type="checkbox" data-c="aimDrawLink"> เส้นจาก crosshair ไปจุดล็อค</label>
-        <label><input type="checkbox" data-c="aimDrawPart"> แสดงส่วนที่ล็อค (head/body/...)</label>
-        <div style="border-top:1px solid #2a3140;margin:4px 0;padding-top:4px">
-          <label><input type="checkbox" data-c="fastSwap"> เปลี่ยนปืนเร็ว (Fast Swap)</label>
-          <div class="pbHelp">ย่อเวลาเปลี่ยนปืนเหลือค่าที่ตั้ง (เฉพาะตอนกำลังเปลี่ยนปืน)</div>
-          <label style="font-size:10px;color:#9ab">Swap time: <span id="pbSwapVal">250</span> ms
-            <input type="range" id="pbSwapSlider" min="50" max="1500" step="10"
-              value="250" style="width:100%;margin-top:2px">
-          </label>
-          <div style="display:flex;gap:4px;align-items:center;margin-top:2px">
-            <input type="number" id="pbSwapNum" min="50" max="1500" step="10" value="250"
-              style="width:78px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
-            <button id="pbSwapReset" type="button"
-              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">RESET</button>
-            <span class="pbHelp" style="margin:0">default 250 ms</span>
-          </div>
+        <div class="pbHelp">คลิกแล้วกดปุ่ม/เมาส์ที่ต้องการ (Esc ยกเลิก)</div>
+        <div class="pbSec">Indicator</div>
+        <label><input type="checkbox" data-c="aimDrawFov"> วงกลม FOV</label>
+        <label><input type="checkbox" data-c="aimDrawLock"> จุดล็อค (bone)</label>
+        <label><input type="checkbox" data-c="aimDrawLink"> เส้น crosshair → จุดล็อค</label>
+        <label><input type="checkbox" data-c="aimDrawPart"> ชื่อส่วนที่ล็อค</label>
+        <div class="pbSec">Tuning</div>
+        <label>FOV <span id="pbFovVal">${CFG.aimFov}</span>°
+          <input type="range" id="pbFovSlider" min="1" max="180" step="1" value="${CFG.aimFov}">
+        </label>
+        <label>Smooth <span id="pbSmVal">${CFG.aimSmooth}</span>
+          <input type="range" id="pbSmSlider" min="1" max="20" step="0.5" value="${CFG.aimSmooth}">
+        </label>
+        <label>Prediction <span id="pbPredVal">${CFG.aimPredictMs}</span> ms
+          <input type="range" id="pbPredSlider" min="0" max="250" step="5" value="${CFG.aimPredictMs}">
+        </label>
+        <label>Tracking <span id="pbTrackVal">${CFG.aimTrack}</span>
+          <input type="range" id="pbTrackSlider" min="0" max="1.5" step="0.1" value="${CFG.aimTrack}">
+        </label>
+        <label>Priority
+          <select id="pbPrioSelect">
+            <option value="angle" ${CFG.aimPriority === "angle" ? "selected" : ""}>ใกล้ crosshair</option>
+            <option value="dist" ${CFG.aimPriority === "dist" ? "selected" : ""}>ระยะใกล้ตัว</option>
+            <option value="hp" ${CFG.aimPriority === "hp" ? "selected" : ""}>HP น้อยสุด</option>
+          </select>
+        </label>
+        <label>Bone
+          <select id="pbBoneSelect">
+            <option value="head">Head</option>
+            <option value="neck">Neck</option>
+            <option value="chest">Chest</option>
+            <option value="pelvis">Pelvis</option>
+            <option value="auto">Auto</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="pbPane" data-pane="weapon" style="display:none">
+        <div class="pbSec">Fast Swap</div>
+        <label><input type="checkbox" data-c="fastSwap"> เปลี่ยนปืนเร็ว</label>
+        <div class="pbHelp">ย่อเวลาเปลี่ยนปืนเหลือค่าที่ตั้ง (เฉพาะตอนกำลังเปลี่ยน)</div>
+        <label>Swap time <span id="pbSwapVal">250</span> ms
+          <input type="range" id="pbSwapSlider" min="50" max="1500" step="10" value="250">
+        </label>
+        <div class="pbRow">
+          <input type="number" id="pbSwapNum" min="50" max="1500" step="10" value="250">
+          <button id="pbSwapReset" type="button">RESET</button>
+          <span class="pbHelp" style="margin:0">default 250</span>
         </div>
-        <div style="border-top:1px solid #2a3140;margin:4px 0;padding-top:4px">
-          <label><input type="checkbox" data-c="statBonus"> โบนัส Reload/Swap (ไม่ต้องมีไอเทม)</label>
-          <div class="pbHelp">เขียนค่า reloadTime / swapTime / quickChange ลง instance ของอาวุธทุกเฟรม</div>
-          <label style="font-size:10px;color:#9ab">โปรไฟล์:
-            <select id="pbBonusProfile"
-              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;margin-left:4px;max-width:190px">
-              <option value="custom">กำหนดเอง (สไลเดอร์)</option>
-            </select>
-          </label>
-          <div class="pbHelp" id="pbBonusCalc">—</div>
-          <label style="font-size:10px;color:#9ab">Reload bonus: <span id="pbBonusRVal">0.50</span>
-            <input type="range" id="pbBonusRSlider" min="0" max="0.9" step="0.01"
-              value="0.5" style="width:100%;margin-top:2px">
-          </label>
-          <label style="font-size:10px;color:#9ab">Swap bonus: <span id="pbBonusSVal">0.50</span>
-            <input type="range" id="pbBonusSSlider" min="0" max="0.9" step="0.01"
-              value="0.5" style="width:100%;margin-top:2px">
-          </label>
-          <div style="display:flex;gap:4px;align-items:center;margin-top:2px">
-            <input type="number" id="pbBonusRNum" min="0" max="0.9" step="0.01" value="0.5"
-              style="width:70px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
-            <input type="number" id="pbBonusSNum" min="0" max="0.9" step="0.01" value="0.5"
-              style="width:70px;background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 6px;font-size:11px">
-            <button id="pbBonusReset" type="button"
-              style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">RESET</button>
-            <span class="pbHelp" style="margin:0">default 0.50 / 0.50</span>
-          </div>
+
+        <div class="pbSec">Bonus — Swap</div>
+        <label><input type="checkbox" data-c="statBonus"> เปิดโบนัส (ไม่ต้องมีไอเทม)</label>
+        <label>โปรไฟล์สับไว
+          <select id="pbSwapProfile"><option value="custom">กำหนดเอง</option></select>
+        </label>
+        <div class="pbHelp" id="pbSwapCalc">—</div>
+        <label>Swap bonus <span id="pbBonusSVal">0.50</span>
+          <input type="range" id="pbBonusSSlider" min="0" max="0.9" step="0.01" value="0.5">
+        </label>
+        <div class="pbRow">
+          <input type="number" id="pbBonusSNum" min="0" max="0.9" step="0.01" value="0.5">
         </div>
-        <div style="display:flex;flex-direction:column;gap:3px;margin-top:3px">
-          <label style="font-size:10px;color:#9ab">FOV: <span id="pbFovVal">${CFG.aimFov}</span>°
-            <input type="range" id="pbFovSlider" min="1" max="180" step="1"
-              value="${CFG.aimFov}" style="width:100%;margin-top:2px">
-          </label>
-          <label style="font-size:10px;color:#9ab">Smoothness (สูง=เร็ว): <span id="pbSmVal">${CFG.aimSmooth}</span>
-            <input type="range" id="pbSmSlider" min="1" max="20" step="0.5"
-              value="${CFG.aimSmooth}" style="width:100%;margin-top:2px">
-          </label>
-          <label style="font-size:10px;color:#9ab">Prediction (ms): <span id="pbPredVal">${CFG.aimPredictMs}</span>
-            <input type="range" id="pbPredSlider" min="0" max="250" step="5"
-              value="${CFG.aimPredictMs}" style="width:100%;margin-top:2px">
-          </label>
-          <label style="font-size:10px;color:#9ab">Tracking (เป้าเดิน): <span id="pbTrackVal">${CFG.aimTrack}</span>
-            <input type="range" id="pbTrackSlider" min="0" max="1.5" step="0.1"
-              value="${CFG.aimTrack}" style="width:100%;margin-top:2px">
-          </label>
-          <label style="font-size:10px;color:#9ab">Priority:
-            <select id="pbPrioSelect" style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;margin-left:4px">
-              <option value="angle" ${CFG.aimPriority === "angle" ? "selected" : ""}>ใกล้ crosshair</option>
-              <option value="dist" ${CFG.aimPriority === "dist" ? "selected" : ""}>ระยะใกล้ตัว</option>
-              <option value="hp" ${CFG.aimPriority === "hp" ? "selected" : ""}>HP น้อยที่สุด</option>
-            </select>
-          </label>
-          <label style="font-size:10px;color:#9ab">Bone:
-            <select id="pbBoneSelect" style="background:#151a23;color:#d7dbe2;border:1px solid #2a3140;border-radius:3px;margin-left:4px">
-              <option value="head">Head</option>
-              <option value="neck">Neck</option>
-              <option value="chest">Chest</option>
-              <option value="pelvis">Pelvis</option>
-              <option value="auto">Auto (ใกล้ crosshair)</option>
-            </select>
-          </label>
+
+        <div class="pbSec">Bonus — Reload</div>
+        <label>โปรไฟล์รีโหลดไว
+          <select id="pbReloadProfile"><option value="custom">กำหนดเอง</option></select>
+        </label>
+        <div class="pbHelp" id="pbReloadCalc">—</div>
+        <label>Reload bonus <span id="pbBonusRVal">0.50</span>
+          <input type="range" id="pbBonusRSlider" min="0" max="0.9" step="0.01" value="0.5">
+        </label>
+        <div class="pbRow">
+          <input type="number" id="pbBonusRNum" min="0" max="0.9" step="0.01" value="0.5">
+          <button id="pbBonusReset" type="button">RESET</button>
+          <span class="pbHelp" style="margin:0">default 0.50</span>
         </div>
       </div>
-      <div style="border-top:1px solid #2a3140;margin:3px 0;padding-top:4px">
-        <!-- label><input type="checkbox" data-c="showAlly"> ฝั่งตัวเอง (ทีมเรา)</label -->
+
+      <div class="pbPane" data-pane="esp" style="display:none">
+        <div class="pbSec">Overlay</div>
         <label><input type="checkbox" data-c="box"> กรอบตัว</label>
         <label><input type="checkbox" data-c="hpBar"> แถบ HP</label>
         <label><input type="checkbox" data-c="name"> ชื่อ + ระยะ</label>
         <label><input type="checkbox" data-c="headDot"> จุดหัว</label>
-        <!-- label><input type="checkbox" data-c="snapline"> เส้นต่อ (ล่างจอ)</label -->
         <label><input type="checkbox" data-c="skeleton"> โครงข้อต่อ</label>
-        <label><input type="checkbox" data-c="perfMode"> ⚡ Performance mode</label>
-        <div class="pbHelp">ปิด skeleton/box/hp/name/humanize พร้อมกันเพื่อลด lag</div>
-        <!-- label><input type="checkbox" data-c="showMe"> กล่องตัวเอง (debug)</label -->
+        <label><input type="checkbox" data-c="perfMode"> Performance mode</label>
+        <div class="pbHelp">ปิด skeleton/box/hp/name/humanize เพื่อลด lag</div>
       </div>
+
       <div id="pbStatus">—</div>
     </div>`;
+
   const css = document.createElement("style");
   css.textContent = `
-    #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:200px;
-      background:#0d1016ee;border:1px solid #2a3140;border-radius:8px;
-      font:12px Tahoma,sans-serif;color:#d7dbe2;user-select:none;box-shadow:0 8px 24px #0009;}
+    #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:238px;
+      background:#0b0d10;border:1px solid #262c33;border-radius:0;
+      font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#dfe5ec;user-select:none;
+      box-shadow:0 14px 34px #000b;}
     #pbEspPanel #pbh{display:flex;justify-content:space-between;align-items:center;
-      padding:7px 10px;background:#151a23;cursor:grab;border-radius:8px 8px 0 0;
-      border-bottom:1px solid #2a3140;font-weight:700;}
-    #pbEspPanel #pbX{cursor:pointer;color:#889;font:700 14px Tahoma;padding:0 4px;}
-    #pbEspPanel #pbBody{padding:8px 10px;display:flex;flex-direction:column;gap:5px;}
-    #pbEspPanel label{display:flex;align-items:center;gap:6px;cursor:pointer;}
-    #pbEspPanel input[type=checkbox]{accent-color:#4fa3ff;cursor:pointer;}
-    #pbEspPanel input[type=range]{accent-color:#4fa3ff;cursor:pointer;}
-    #pbStatus{margin-top:6px;padding-top:6px;border-top:1px dashed #2a3140;color:#8fd18f;font-size:11px;}
-    #pbEspPanel .pbHelp{font-size:9.5px;color:#7d8798;line-height:1.35;margin:-2px 0 2px 20px;}
+      padding:8px 10px;background:#0f1216;border-bottom:1px solid #262c33;cursor:grab;
+      font:700 10.5px 'Segoe UI';letter-spacing:2px;text-transform:uppercase;color:#f5a623;}
+    #pbEspPanel #pbX{cursor:pointer;color:#6e7a88;font:700 14px Tahoma;padding:0 4px;}
+    #pbEspPanel #pbX:hover{color:#f5a623;}
+    #pbEspPanel #pbTabs{display:flex;background:#0d1013;border-bottom:1px solid #262c33;}
+    #pbEspPanel #pbTabs button{flex:1;padding:7px 2px;background:transparent;border:0;
+      border-bottom:2px solid transparent;color:#7b8794;font:700 9px 'Segoe UI';
+      letter-spacing:1.2px;cursor:pointer;border-radius:0;}
+    #pbEspPanel #pbTabs button.on{color:#f5a623;border-bottom-color:#f5a623;background:#12161b;}
+    #pbEspPanel #pbBody{padding:0;display:block;}
+    #pbEspPanel .pbSec{color:#78838f;font:700 9px 'Segoe UI';letter-spacing:1.6px;
+      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #f5a623;
+      background:#0d1013;border-bottom:1px solid #20262c;}
+    #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:23px;
+      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11px;color:#c3ccd6;}
+    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#f5a623;margin:0;cursor:pointer;}
+    #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;
+      background:transparent;margin:3px 0 4px;padding:0 10px;cursor:pointer;}
+    #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:2px;background:#2b323a;}
+    #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:13px;
+      margin-top:-6px;background:#f5a623;border:0;}
+    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#0f1317;
+      color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
+    #pbEspPanel select{max-width:150px;}
+    #pbEspPanel input[type=number]{width:64px;text-align:right;}
+    #pbEspPanel button{cursor:pointer;text-transform:uppercase;letter-spacing:.8px;}
+    #pbEspPanel button:hover{border-color:#f5a623;color:#f5a623;}
+    #pbEspPanel .pbRow{display:flex;gap:4px;align-items:center;padding:4px 10px;
+      border-bottom:1px solid rgba(255,255,255,.035);}
+    #pbEspPanel .pbSeg{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.035);}
+    #pbEspPanel .pbSeg label{flex:1;justify-content:center;border-bottom:0;}
+    #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #262c33;
+      background:#0d1013;color:#7be38a;font:10px Consolas,monospace;}
+    #pbEspPanel .pbHelp{font-size:9px;color:#6f7f96;line-height:1.4;margin:0;padding:0 10px 5px;}
     #pbBtnChip{position:fixed;right:10px;top:56px;z-index:2147483001;padding:4px 10px;
-      background:#000c;color:#9fe;font:700 12px Tahoma;border:1px solid #2a3140;border-radius:6px;} `;
+      background:#0b0d10;color:#f5a623;font:700 11px 'Segoe UI';border:1px solid #262c33;
+      border-radius:0;letter-spacing:1px;} `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
   (document.body || document.documentElement).appendChild(panel);
+
+  /* tabs */
+  const tabBtns = panel.querySelectorAll("#pbTabs button");
+  const panes = panel.querySelectorAll(".pbPane");
+  const showTab = (name) => {
+    for (const b of tabBtns) b.classList.toggle("on", b.dataset.tab === name);
+    for (const p of panes) p.style.display = p.dataset.pane === name ? "block" : "none";
+  };
+  for (const b of tabBtns) b.addEventListener("click", () => showTab(b.dataset.tab));
+  showTab("core");
 
   // ผูก checkbox -> CFG
   for (const c of panel.querySelectorAll("input[type=checkbox]")) {
@@ -2368,47 +2407,76 @@
     return { r, s, qc, fr, key: it.key || String(it.id || "") };
   };
 
-  const bonusSel = panel.querySelector("#pbBonusProfile");
-  const bonusCalc = panel.querySelector("#pbBonusCalc");
+  const swapSel = panel.querySelector("#pbSwapProfile");
+  const reloadSel = panel.querySelector("#pbReloadProfile");
+  const swapCalc = panel.querySelector("#pbSwapCalc");
+  const reloadCalc = panel.querySelector("#pbReloadCalc");
+
+  const swapBonusOf = () => {
+    const prof = CFG.swapProfile || "custom";
+    if (prof === "custom") return { s: Number(CFG.bonusSwap) || 0, qc: true };
+    if (prof.startsWith("item:")) {
+      const b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
+      return b ? { s: b.s, qc: b.qc || b.s > 0 } : null;
+    }
+    return null;
+  };
+  const reloadBonusOf = () => {
+    const prof = CFG.reloadProfile || "custom";
+    if (prof === "custom") return { r: Number(CFG.bonusReload) || 0, fr: null };
+    if (prof.startsWith("item:")) {
+      const b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
+      return b ? { r: b.r, fr: b.fr } : null;
+    }
+    return null;
+  };
   const updateBonusCalc = () => {
-    if (!bonusCalc) return;
-    const prof = CFG.bonusProfile || "custom";
-    let b = null;
-    if (prof === "custom") b = { r: Number(CFG.bonusReload) || 0, s: Number(CFG.bonusSwap) || 0, qc: true };
-    else if (prof.startsWith("item:")) b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
-    if (!b) { bonusCalc.textContent = prof === "off" ? "ปิด" : "—"; return; }
-    const swapMul = b.qc ? Math.max(0.1, 1 - b.s) : 1;
-    const reloadMul = Math.max(0.1, 1 - b.r);
-    bonusCalc.textContent =
-      "swap ×" + (1 / swapMul).toFixed(2) + " · reload ×" + (1 / reloadMul).toFixed(2) +
-      " · " + (b.fr && Object.keys(b.fr).length ? "fast " + Object.keys(b.fr).join("/") : "fast -");
+    if (swapCalc) {
+      const b = swapBonusOf();
+      if (!b) swapCalc.textContent = (CFG.swapProfile || "custom") === "off" ? "ปิด" : "—";
+      else {
+        const mul = b.qc ? Math.max(0.1, 1 - b.s) : 1;
+        swapCalc.textContent = "swap ×" + (1 / mul).toFixed(2);
+      }
+    }
+    if (reloadCalc) {
+      const b = reloadBonusOf();
+      if (!b) reloadCalc.textContent = (CFG.reloadProfile || "custom") === "off" ? "ปิด" : "—";
+      else {
+        const mul = Math.max(0.1, 1 - b.r);
+        const fam = b.fr ? Object.keys(b.fr) : [];
+        reloadCalc.textContent = "reload ×" + (1 / mul).toFixed(2) + (fam.length ? " · " + fam.join("/") : " · fast -");
+      }
+    }
   };
   const fillProfiles = () => {
-    if (!bonusSel || !EQUIP) return;
-    const cur = CFG.bonusProfile || "custom";
-    bonusSel.innerHTML = "";
-    const add = (v, t) => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = t; bonusSel.appendChild(o);
-    };
-    add("custom", "กำหนดเอง (สไลเดอร์)");
-    add("off", "ปิด");
+    if (!EQUIP) return;
     const rows = [];
     for (const [id, it] of Object.entries(EQUIP)) {
       const b = itemBonus(it);
       if (!b) continue;
-      if (!b.r && !b.s && !b.qc && !Object.keys(b.fr).length) continue;
-      rows.push([id, b]);
+      if (b.s || b.qc || b.r || Object.keys(b.fr).length) rows.push([id, b]);
     }
     rows.sort((a, b) => a[1].key.localeCompare(b[1].key));
-    for (const [id, b] of rows.slice(0, 400)) {
-      const bits = [];
-      if (b.s) bits.push("swap " + b.s);
-      if (b.r) bits.push("reload " + b.r);
-      if (Object.keys(b.fr).length) bits.push("fast " + Object.keys(b.fr).join("/"));
-      add("item:" + id, b.key + (bits.length ? " · " + bits.join(" · ") : ""));
-    }
-    bonusSel.value = cur;
+    const fill = (sel, cur, kind) => {
+      if (!sel) return;
+      sel.innerHTML = "";
+      const add = (v, t) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); };
+      add("custom", "กำหนดเอง (สไลเดอร์)");
+      add("off", "ปิด");
+      for (const [id, b] of rows.slice(0, 400)) {
+        if (kind === "swap" && !(b.s || b.qc)) continue;
+        if (kind === "reload" && !(b.r || Object.keys(b.fr).length)) continue;
+        const bits = [];
+        if (kind === "swap" && b.s) bits.push("swap " + b.s);
+        if (kind === "reload" && b.r) bits.push("reload " + b.r);
+        if (kind === "reload" && Object.keys(b.fr).length) bits.push("fast " + Object.keys(b.fr).join("/"));
+        add("item:" + id, b.key + (bits.length ? " · " + bits.join(" · ") : ""));
+      }
+      sel.value = cur;
+    };
+    fill(swapSel, CFG.swapProfile || "custom", "swap");
+    fill(reloadSel, CFG.reloadProfile || "custom", "reload");
     updateBonusCalc();
   };
   const loadEquip = () => {
@@ -2423,12 +2491,18 @@
       }).catch(() => {});
     } catch (e) {}
   };
-  if (bonusSel) {
-    bonusSel.value = CFG.bonusProfile || "custom";
-    bonusSel.addEventListener("change", () => {
-      CFG.bonusProfile = bonusSel.value;
-      saveCfg();
-      updateBonusCalc();
+  if (swapSel) {
+    swapSel.value = CFG.swapProfile || "custom";
+    swapSel.addEventListener("change", () => {
+      CFG.swapProfile = swapSel.value;
+      saveCfg(); updateBonusCalc();
+    });
+  }
+  if (reloadSel) {
+    reloadSel.value = CFG.reloadProfile || "custom";
+    reloadSel.addEventListener("change", () => {
+      CFG.reloadProfile = reloadSel.value;
+      saveCfg(); updateBonusCalc();
     });
   }
   loadEquip();
@@ -2437,47 +2511,42 @@
 
   function bonusTick(pb) {
     if (!CFG.statBonus) return;
-    const prof = CFG.bonusProfile || "custom";
-    if (prof === "off") return;
+    const sb = swapBonusOf();
+    const rb = reloadBonusOf();
+    if (!sb && !rb) return;
     const ws = weaponSystemOf(pb);
     if (!ws) return;
-    let r = 0, s = 0, qc = 0, fr = null, custom = false;
-    if (prof === "custom") {
-      r = Math.max(0, Math.min(0.9, Number(CFG.bonusReload) || 0));
-      s = Math.max(0, Math.min(0.9, Number(CFG.bonusSwap) || 0));
-      qc = 1;
-      fr = "all";
-      custom = true;
-    } else if (prof.startsWith("item:")) {
-      const b = itemBonus(EQUIP && EQUIP[prof.slice(5)]);
-      if (!b) return;
-      r = b.r; s = b.s; qc = (b.qc || s > 0) ? 1 : 0; fr = b.fr;
-    } else return;
 
     const a = ws.abilities;
     if (a && typeof a === "object" && !Object.isFrozen(a)) {
-      a.quickChange = qc;              // gate: swapTime only counts when > 0
-      a.swapTime = Math.min(0.9, Math.max(0, s));
-      a.reloadTime = Math.min(0.9, Math.max(0, r));
-      if (!a.fastReload || typeof a.fastReload !== "object") a.fastReload = {};
-      if (fr === "all") {
-        for (const slot of (ws.slots || [])) {
-          const def = slot && slot.def;
-          const fam = def && (def.family || (def.params && def.params.family));
-          if (fam) a.fastReload[fam] = 1;
+      if (sb) {
+        a.quickChange = sb.qc ? 1 : 0;   // gate: swapTime only counts when > 0
+        a.swapTime = Math.min(0.9, Math.max(0, sb.s));
+      }
+      if (rb) {
+        a.reloadTime = Math.min(0.9, Math.max(0, rb.r));
+        if (!a.fastReload || typeof a.fastReload !== "object") a.fastReload = {};
+        if (!rb.fr) {
+          for (const slot of (ws.slots || [])) {
+            const def = slot && slot.def;
+            const fam = def && (def.family || (def.params && def.params.family));
+            if (fam) a.fastReload[fam] = 1;
+          }
+        } else {
+          for (const k of Object.keys(rb.fr)) a.fastReload[k] = rb.fr[k];
         }
-      } else if (fr) {
-        for (const k of Object.keys(fr)) a.fastReload[k] = fr[k];
       }
     }
-    /* itemFx is only the legacy path (abilities === null). Custom mode sets
-       every flag; an item profile must not add bonuses the item does not have. */
-    if (custom) {
-      const fx = ws.itemFx;
-      if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
+    /* itemFx is only the legacy path (abilities === null). Only the CUSTOM
+       side writes flags; an item profile must not add bonuses it lacks. */
+    const fx = ws.itemFx;
+    if (fx && typeof fx === "object" && !Object.isFrozen(fx)) {
+      if (CFG.swapProfile === "custom") {
         fx.quickChangeWeapon = 1;
-        fx.quickChangeReload = 1;
         fx.beretQuickChange = 1;
+      }
+      if (CFG.reloadProfile === "custom") {
+        fx.quickChangeReload = 1;
         fx.beretFastReload = 1;
       }
     }
