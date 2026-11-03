@@ -60,7 +60,7 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
   };
-  const VERSION = "v1.17.2";
+  const VERSION = "v1.18";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -194,9 +194,8 @@
   /* ---------- GUI: แผงควบคุมลากได้ ---------- */
   const panel = document.createElement("div");
   panel.innerHTML = `
-    <canvas id="pbFx"></canvas>
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.17.2</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.18</span><span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -335,153 +334,58 @@
   const css = document.createElement("style");
   css.textContent = `
     #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:238px;
-      background:transparent;border:1px solid #262c33;border-radius:0;
+      background:#0b0f14;border:1px solid #22303f;border-radius:0;
       font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#dfe5ec;user-select:none;
       box-shadow:0 14px 34px #000b;overflow:hidden;}
-    #pbEspPanel #pbFx{position:absolute;inset:0;width:100%;height:100%;z-index:0;
-      pointer-events:none;display:block;}
-    #pbEspPanel #pbh,#pbEspPanel #pbTabs,#pbEspPanel #pbBody,#pbEspPanel #pbStatus{position:relative;z-index:1;}
-    #pbEspPanel #pbh{background:rgba(15,18,22,.72);}
-    #pbEspPanel #pbTabs{background:rgba(13,16,19,.72);}
-    #pbEspPanel .pbSec{background:rgba(13,16,19,.66);}
-    #pbEspPanel #pbStatus{background:rgba(13,16,19,.78);}
+    #pbEspPanel #pbh{background:#0f141b;}
+    #pbEspPanel #pbTabs{background:#0b1016;}
+    #pbEspPanel .pbSec{background:#0b1016;}
+    #pbEspPanel #pbStatus{background:#0b1016;}
     #pbEspPanel #pbh{display:flex;justify-content:space-between;align-items:center;
-      padding:8px 10px;background:rgba(15,18,22,.72);border-bottom:1px solid #262c33;cursor:grab;
-      font:700 10.5px 'Segoe UI';letter-spacing:2px;text-transform:uppercase;color:#f5a623;}
+      padding:8px 10px;background:#0f141b;border-bottom:1px solid #262c33;cursor:grab;
+      font:700 10.5px 'Segoe UI';letter-spacing:2px;text-transform:uppercase;color:#4fa3ff;}
     #pbEspPanel #pbX{cursor:pointer;color:#6e7a88;font:700 14px Tahoma;padding:0 4px;}
-    #pbEspPanel #pbX:hover{color:#f5a623;}
-    #pbEspPanel #pbTabs{display:flex;background:rgba(13,16,19,.72);border-bottom:1px solid #262c33;}
+    #pbEspPanel #pbX:hover{color:#4fa3ff;}
+    #pbEspPanel #pbTabs{display:flex;background:#0b1016;border-bottom:1px solid #262c33;}
     #pbEspPanel #pbTabs button{flex:1;padding:7px 2px;background:transparent;border:0;
       border-bottom:2px solid transparent;color:#7b8794;font:700 9px 'Segoe UI';
       letter-spacing:1.2px;cursor:pointer;border-radius:0;}
-    #pbEspPanel #pbTabs button.on{color:#f5a623;border-bottom-color:#f5a623;background:#12161b;}
+    #pbEspPanel #pbTabs button.on{color:#4fa3ff;border-bottom-color:#4fa3ff;background:#12161b;}
     #pbEspPanel #pbBody{padding:0;display:block;}
     #pbEspPanel .pbSec{color:#78838f;font:700 9px 'Segoe UI';letter-spacing:1.6px;
-      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #f5a623;
-      background:rgba(13,16,19,.66);border-bottom:1px solid #20262c;}
+      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #4fa3ff;
+      background:#0b1016;border-bottom:1px solid #20262c;}
     #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:23px;
       border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11px;color:#c3ccd6;}
-    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#f5a623;margin:0;cursor:pointer;}
+    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#4fa3ff;margin:0;cursor:pointer;}
     #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;
       background:transparent;margin:3px 0 4px;padding:0 10px;cursor:pointer;}
     #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:2px;background:#2b323a;}
     #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:13px;
-      margin-top:-6px;background:#f5a623;border:0;}
+      margin-top:-6px;background:#4fa3ff;border:0;}
     #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#0f1317;
       color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
     #pbEspPanel select{max-width:150px;}
     #pbEspPanel input[type=number]{width:64px;text-align:right;}
     #pbEspPanel button{cursor:pointer;text-transform:uppercase;letter-spacing:.8px;}
-    #pbEspPanel button:hover{border-color:#f5a623;color:#f5a623;}
+    #pbEspPanel button:hover{border-color:#4fa3ff;color:#4fa3ff;}
     #pbEspPanel .pbRow{display:flex;gap:4px;align-items:center;padding:4px 10px;
       border-bottom:1px solid rgba(255,255,255,.035);}
     #pbEspPanel .pbSeg{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.035);}
     #pbEspPanel .pbSeg label{flex:1;justify-content:center;border-bottom:0;}
     #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #262c33;
-      background:rgba(13,16,19,.78);color:#7be38a;font:10px Consolas,monospace;}
+      background:#0b1016;color:#7be38a;font:10px Consolas,monospace;}
     #pbEspPanel .pbHelp{font-size:9px;color:#6f7f96;line-height:1.4;margin:0;padding:0 10px 5px;}
     #pbBtnChip{position:fixed;right:10px;top:56px;z-index:2147483001;padding:4px 10px;
-      background:#0b0d10;color:#f5a623;font:700 11px 'Segoe UI';border:1px solid #262c33;
+      background:#0b0d10;color:#4fa3ff;font:700 11px 'Segoe UI';border:1px solid #262c33;
       border-radius:0;letter-spacing:1px;}
-    /* ---- motion / effects (CSS only, cheap) ---- */
-    @keyframes pbIn{from{opacity:0;transform:translateY(-7px) scale(.985)}to{opacity:1;transform:none}}
-    #pbEspPanel.pb-in{animation:pbIn .18s cubic-bezier(.2,.7,.3,1)}
-    @keyframes pbScan{0%{transform:translateY(-120%)}100%{transform:translateY(1400%)}}
-    #pbEspPanel::after{content:"";position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
-      background:linear-gradient(180deg,rgba(245,166,35,.07),transparent);
-      animation:pbScan 7s linear infinite;}
-    @keyframes pbPulse{0%,100%{box-shadow:0 0 0 rgba(245,166,35,0)}50%{box-shadow:0 0 10px rgba(245,166,35,.55)}}
-    #pbEspPanel .pbSec{border-left:2px solid #f5a623;animation:pbPulse 2.8s ease-in-out infinite;}
-    #pbEspPanel #pbTabs button{transition:color .15s,background .15s,border-color .15s}
-    #pbEspPanel #pbTabs button.on{box-shadow:inset 0 -1px 0 #f5a623, 0 0 10px rgba(245,166,35,.18)}
-    #pbEspPanel label{transition:background .12s}
-    #pbEspPanel label:hover{background:rgba(245,166,35,.05)}
-    #pbEspPanel label input[type=checkbox]{transition:box-shadow .15s,transform .1s}
-    #pbEspPanel label input[type=checkbox]:active{transform:scale(.88)}
-    #pbEspPanel label input[type=checkbox]:checked{box-shadow:0 0 7px rgba(245,166,35,.55)}
-    #pbEspPanel input[type=range]::-webkit-slider-thumb{transition:box-shadow .15s,transform .1s}
-    #pbEspPanel input[type=range]:active::-webkit-slider-thumb{box-shadow:0 0 10px rgba(245,166,35,.8);transform:scaleY(1.15)}
-    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{transition:border-color .15s,color .15s,background .15s}
-    #pbEspPanel button:active{transform:translateY(1px)}
-    #pbEspPanel #pbStatus{position:relative;padding-left:20px;}
-    #pbEspPanel #pbStatus::before{content:"";position:absolute;left:9px;top:50%;width:5px;height:5px;
-      margin-top:-2.5px;background:#7be38a;animation:pbBlink 1.6s steps(1) infinite;}
-    @keyframes pbBlink{0%,55%{opacity:1}56%,100%{opacity:.25}}
-    @media (prefers-reduced-motion: reduce){
-      #pbEspPanel *,#pbEspPanel::after{animation:none!important;transition:none!important}
-    } `;
+    #pbEspPanel button:hover{border-color:#4fa3ff;color:#4fa3ff}
+    #pbEspPanel label:hover{background:rgba(79,163,255,.05)}
+  `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
   (document.body || document.documentElement).appendChild(panel);
 
-  /* ---- cyber backdrop (red/blue) behind the panel content ----
-     A small canvas painted at ~22 fps; it stops entirely while the panel is
-     hidden, and draws one static frame when the OS asks for reduced motion. */
-  const fx = panel.querySelector("#pbFx");
-  const FX = { raf: 0, last: 0, on: false, reduce: false };
-  try { FX.reduce = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  const fxPaint = (t) => {
-    if (!fx) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = panel.clientWidth || 238;
-    const h = panel.clientHeight || 300;
-    const cw = Math.round(w * dpr), ch = Math.round(h * dpr);
-    if (fx.width !== cw || fx.height !== ch) { fx.width = cw; fx.height = ch; }
-    const c = fx.getContext("2d");
-    if (!c) return;
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.clearRect(0, 0, w, h);
-    c.fillStyle = "#07090c";
-    c.fillRect(0, 0, w, h);
-    const tt = t / 1000;
-
-    let g = c.createRadialGradient(w * 0.15 + Math.sin(tt * 0.7) * 16, h * 0.18, 0, w * 0.15, h * 0.18, w * 0.95);
-    g.addColorStop(0, "rgba(255,42,74,0.22)");
-    g.addColorStop(1, "rgba(255,42,74,0)");
-    c.fillStyle = g; c.fillRect(0, 0, w, h);
-
-    g = c.createRadialGradient(w * 0.9, h * 0.82 + Math.cos(tt * 0.6) * 16, 0, w * 0.9, h * 0.82, w * 0.95);
-    g.addColorStop(0, "rgba(48,120,255,0.20)");
-    g.addColorStop(1, "rgba(48,120,255,0)");
-    c.fillStyle = g; c.fillRect(0, 0, w, h);
-
-    const step = 18;
-    const ox = (tt * 10) % step, oy = (-tt * 7) % step;
-    c.lineWidth = 1;
-    c.strokeStyle = "rgba(255,60,80,0.075)";
-    c.beginPath();
-    for (let x = -step + ox; x < w; x += step) { c.moveTo(x, 0); c.lineTo(x, h); }
-    c.stroke();
-    c.strokeStyle = "rgba(70,140,255,0.075)";
-    c.beginPath();
-    for (let y = -step + oy; y < h; y += step) { c.moveTo(0, y); c.lineTo(w, y); }
-    c.stroke();
-
-    const band = ((tt * 46) % (h + 140)) - 70;
-    const bg = c.createLinearGradient(0, band, 0, band + 44);
-    bg.addColorStop(0, "rgba(255,60,90,0)");
-    bg.addColorStop(0.5, "rgba(255,80,110,0.10)");
-    bg.addColorStop(1, "rgba(80,140,255,0)");
-    c.fillStyle = bg; c.fillRect(0, band, w, 44);
-  };
-  const fxLoop = (t) => {
-    if (!FX.on) { FX.raf = 0; return; }
-    if (t - FX.last < 45) { FX.raf = requestAnimationFrame(fxLoop); return; }
-    FX.last = t;
-    fxPaint(t);
-    FX.raf = requestAnimationFrame(fxLoop);
-  };
-  const fxStart = () => {
-    if (!fx || FX.on) return;
-    if (FX.reduce) { fxPaint(performance.now()); return; }
-    FX.on = true;
-    if (!FX.raf) FX.raf = requestAnimationFrame(fxLoop);
-  };
-  const fxStop = () => {
-    FX.on = false;
-    if (FX.raf) { cancelAnimationFrame(FX.raf); FX.raf = 0; }
-  };
-  fxStart();
 
   const tabBtns = panel.querySelectorAll("#pbTabs button");
   const panes = panel.querySelectorAll(".pbPane");
@@ -690,16 +594,6 @@
      Insert is the only way back (that is the point of the hotkey). */
   const setMenu = (show) => {
     panel.style.display = show ? "" : "none";
-    if (show) {
-      try {
-        panel.classList.remove("pb-in");
-        void panel.offsetWidth;          /* restart the entrance animation */
-        panel.classList.add("pb-in");
-      } catch (e) {}
-      try { fxStart(); } catch (e) {}
-    } else {
-      try { fxStop(); } catch (e) {}
-    }
     chip.style.display = "none";
     try { localStorage.setItem("pbEspMenu", show ? "1" : "0"); } catch (_) {}
   };
