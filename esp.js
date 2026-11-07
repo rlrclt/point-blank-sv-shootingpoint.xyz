@@ -62,8 +62,9 @@
     aimTrack: 1.0,     // feedforward ชดเชยเป้าที่เดิน/วิ่ง (0=ปิด, 1=เต็ม, >1=นำเป้า)
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
+    showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.21";
+  const VERSION = "v1.24";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -209,6 +210,11 @@
     <div id="pbBody">
 
       <div class="pbPane" data-pane="core">
+        <div class="pbSec">FPS Counter</div>
+        <label><input type="checkbox" data-c="unlockFps"> ปลดล็อก FPS (ถ้าเกม/เบราว์เซอร์รองรับ)</label>
+        <label><input type="checkbox" data-c="showFps"> แสดง FPS</label>
+        <label>สไตล์ FPS <select id="pbFpsStyle"><option value="plain">เรียบ</option><option value="box">กล่อง</option><option value="neon">นีออน</option></select></label>
+        <label><input type="checkbox" data-c="fpsLabel"> แสดงคำว่า FPS</label>
         <div class="pbSec">Movement / Spoof</div>
         <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
         <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
@@ -412,6 +418,32 @@
   };
   for (const b of tabBtns) b.addEventListener("click", () => showTab(b.dataset.tab));
   showTab("core");
+
+  const fpsStyleSelect = panel.querySelector("#pbFpsStyle");
+  fpsStyleSelect.value = ["plain", "box", "neon"].includes(CFG.fpsStyle) ? CFG.fpsStyle : "box";
+  fpsStyleSelect.addEventListener("change", () => { CFG.fpsStyle = fpsStyleSelect.value; saveCfg(); });
+  let fpsFrames = 0, fpsValue = 0, fpsUpdatedAt = performance.now();
+  function countGameFrame() {
+    fpsFrames++;
+    const now = performance.now();
+    if (now - fpsUpdatedAt >= 500) {
+      fpsValue = Math.round(fpsFrames * 1000 / (now - fpsUpdatedAt));
+      fpsFrames = 0;
+      fpsUpdatedAt = now;
+    }
+  }
+  function hookGameFpsCounter() {
+    const hud = window.__pb?.hud;
+    if (!hud || typeof hud.tickFps !== "function" || hud.tickFps.__pbFpsHook) return false;
+    const original = hud.tickFps;
+    const wrapped = function (...args) {
+      countGameFrame();
+      return original.apply(this, args);
+    };
+    wrapped.__pbFpsHook = true;
+    hud.tickFps = wrapped;
+    return true;
+  }
 
   // ผูก checkbox -> CFG
   for (const c of panel.querySelectorAll("input[type=checkbox]")) {
@@ -2122,7 +2154,7 @@
   /* Which client are we on? Recoil can only be cancelled when its state is
      reachable: an old-style classic bundle publishes window.__pb, a classic
      bundle with top-level consts exposes the player as Ye / P. The current
-     pbmobile-th.online client is a Vite ES-module build — its chunks import each
+     shootingpoint.xyz client is a Vite ES-module build — its chunks import each
      other and publish nothing on window, so no script running beside it can
      read or zero the recoil accumulator. Saying so is better than a checkbox
      that silently does nothing. */
@@ -2277,6 +2309,23 @@
     // กรอง pass อื่น (fp-scene / fx / mirror) — วาดเฉพาะ scene หลักของเกมเท่านั้น
     if (scene && pb?.scene && scene !== pb.scene) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
+    if (CFG.showFps) {
+      const dpr = devicePixelRatio || 1, text = `${fpsValue}${CFG.fpsLabel ? " FPS" : ""}`;
+      ctx.save();
+      ctx.font = `700 ${14 * dpr}px 'Segoe UI', sans-serif`;
+      ctx.textBaseline = "top";
+      if (CFG.fpsStyle === "box") {
+        const w = ctx.measureText(text).width;
+        ctx.fillStyle = "rgba(10,15,20,.78)"; ctx.fillRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
+        ctx.strokeStyle = "#4fa3ff"; ctx.strokeRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
+        ctx.fillStyle = "#fff"; ctx.fillText(text, 20 * dpr, 18 * dpr);
+      } else {
+        ctx.fillStyle = CFG.fpsStyle === "neon" ? "#42ffb0" : "#fff";
+        if (CFG.fpsStyle === "neon") { ctx.shadowColor = "#42ffb0"; ctx.shadowBlur = 10 * dpr; }
+        ctx.fillText(text, 14 * dpr, 14 * dpr);
+      }
+      ctx.restore();
+    }
     if (!pb || !pb.me) { setStatus("รอเข้าแมตช์..."); return; }
     wrapPlace();
 
@@ -2475,6 +2524,17 @@
         }
       }
     }
+  }
+
+  // The game's renderer loop applies its own 60 FPS pacer after rAF. Clearing
+  // that pacer lets the browser schedule frames at its native rate; rAF itself
+  // may still follow the display refresh rate and cannot be bypassed here.
+  function applyFpsUnlock() {
+    try {
+      const cap = window.__pbFpsPacer;
+      if (!cap) return;
+      cap.cap = CFG.unlockFps ? 0 : 60;
+    } catch (_) {}
   }
 
   /* วาด "หลัง" renderer.render ของเกมพอดีทุกเฟรม — กล่องจะขยับพร้อมกล้องไม่มี lag
@@ -2708,6 +2768,7 @@
     const orig = R.render;
     R.render = function (...args) {
       const scene = args[0], camera = args[1];
+      hookGameFpsCounter();
 
       // aim ต้อง tick ก่อนใส่ visual kick เพื่อไม่ให้ addLook/updateCamera ทับ offset
       // เกมอาจเรียก render หลาย pass ต่อเฟรม → tick ครั้งเดียวต่อ frameNo + เฉพาะ scene หลัก
@@ -2775,7 +2836,7 @@
      rec = { v, A, t, T, hPend, hRate, hState }. Zeroing it every frame is what
      actually cancels the kick; the old `pb.player.addRecoil` hook only ever
      ran on an old-style `window.__pb` client and is dead elsewhere. On an
-     ES-module client (pbmobile-th.online today) none of these exist, so this
+     ES-module client (shootingpoint.xyz today) none of these exist, so this
      loop does nothing and the status line says so. */
   (function liveRecoilLoop() {
     requestAnimationFrame(liveRecoilLoop);

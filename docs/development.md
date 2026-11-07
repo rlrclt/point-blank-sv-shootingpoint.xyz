@@ -6,8 +6,9 @@
 pb-esp-ext/
 ├── esp.js              ตัวหลัก (ESP / aim / recoil / fast swap / GUI)
 ├── injector.js         ฉีด esp.js เข้า MAIN world
-├── mobile-spoof.js     ปลอมอุปกรณ์/header
-├── manifest.json       MV3
+├── mobile-spoof.js     ปลอมอุปกรณ์ + periph guard (MAIN world, document_start)
+├── bg.js               service worker — dynamic DNR rule (UA / CH headers)
+├── manifest.json       MV3 (permissions, host_permissions, background)
 ├── pbrecon/            ซอร์สที่แยกจาก build จริง (อ่านอย่างเดียว)
 │   ├── main-*.js       engine, player, weapon system, anti-cheat
 │   ├── avatarCombat-*.js  stat/upgrade (swapTime, reloadTime)

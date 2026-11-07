@@ -50,6 +50,91 @@
   if (!("ontouchstart" in window)) window.ontouchstart = null;
   try { Object.defineProperty(window, "ontouchstart", { value: null, configurable: true }); } catch (_) {}
 
+  /* ───── 2b. PC-INPUT LOCK ────────────────────────────────────────────
+     roomInputDevice.js (shootingpoint.xyz) ทำแบบนี้:
+       const F = "pb.room.pcInput.v1";                 // sessionStorage
+       const B = () => { sessionStorage.setItem(F,"1"); setLocalDevice(pc); reportPcInput() };
+       const isPcEvent = e => e.isTrusted && e.pointerType==="mouse"
+                             && (e.type==="pointerdown" || e.movementX || e.movementY);
+       document.addEventListener("pointerdown", e => { if (localDevice!==pc && isPcEvent(e)) B() }, true);
+       document.addEventListener("pointermove", e => { ...same... }, true);
+       window.addEventListener("keydown", e => { if (localDevice!==pc && isGameKey(e)) B() }, true);
+     ⇒ ขยับเมาส์หรือกดคีย์บอร์ดครั้งเดียว = เกมเปลี่ยนเป็น PC ทันที
+
+     วิธีที่ใช้ (ตาม pbmobile-ext ซึ่งพิสูจน์แล้วว่าได้ผล):
+       1) ทิ้ง listener ของตัว detector ตั้งแต่ตอนมันลงทะเบียน (periph guard)
+       2) ปิด isTrusted เป็นชั้นสอง เผื่อ listener หลุด guard ไป
+       3) ไม่แตะ prototype ของ Storage / EventTarget / WebSocket เลย
+          (AC ของตระกูลนี้ตรวจ native พวกนั้น) */
+  const PC_KEY = "pb.room.pcInput.v1";
+  try { sessionStorage.removeItem(PC_KEY); } catch (_) {}
+  try { localStorage.removeItem("pbweb_periph"); } catch (_) {}
+
+  /* 1) PERIPH GUARD — drop listener ที่เป็นตัวจับ mouse/key ของเกม
+     ลงทะเบียนบน window/document แบบ capture, ฟังก์ชันสั้น, และ source
+     มีคำที่ detector ใช้ (pbInput / localDevice / .pc / pbweb_periph)
+     ไม่แตะ event, ไม่แตะ prototype — แค่ไม่ให้ callback นั้นถูกผูก */
+  const PERIPH_RE = /pbInput|pcInput|pbweb_periph|localDevice|setLocalDevice|\.pc\b/i;
+  const GUARD = { dropped: 0 };
+  const guardEvents = (target) => {
+    try {
+      const add = target.addEventListener;
+      if (typeof add !== "function") return;
+      const wrapped = function (type, fn, opts) {
+        try {
+          const cap = opts === true || (opts && typeof opts === "object" && opts.capture);
+          if (cap && (type === "pointerdown" || type === "pointermove" ||
+            type === "mousedown" || type === "mousemove" || type === "keydown")) {
+            const src = String(fn);
+            if (src.length < 4000 && PERIPH_RE.test(src)) {
+              GUARD.dropped++;
+              return;                       // ไม่ผูก listener ตัวนี้
+            }
+          }
+        } catch (_) { }
+        return add.call(this, type, fn, opts);
+      };
+      try { Object.defineProperty(wrapped, "name", { value: "addEventListener" }); } catch (_) { }
+      target.addEventListener = wrapped;
+    } catch (_) { }
+  };
+
+  /* 2) isTrusted ชั้นสอง — ปิดเฉพาะ pointer(mouse) + keydown
+     ไม่แตะ touch (เกมใช้ isTrusted จับ touch จริง) */
+  const hideTrust = (e) => {
+    if (e.isTrusted !== true) return;
+    if (e.type !== "keydown" && e.pointerType !== "mouse") return;
+    try { Object.defineProperty(e, "isTrusted", { configurable: true, get: () => false }); } catch (_) { }
+  };
+  for (const t of ["pointerdown", "pointermove", "keydown"]) {
+    try { window.addEventListener(t, hideTrust, true); } catch (_) { }
+  }
+
+  /* ติด guard หลัง listener ของเราเองแล้ว เพื่อไม่ให้มันกรองของเรา */
+  guardEvents(window);
+  guardEvents(document);
+
+  /* เกมนับ "synthetic input" จากอีเวนต์ที่ isTrusted=false แล้วรายงานขึ้นเซิร์ฟเวอร์
+     (input.takeUntrusted → "input-synthetic") — ปิดตัวนับที่ต้นทาง */
+  const _inputPatched = new WeakSet();
+  setInterval(() => {
+    try {
+      const input = window.__pb?.input;
+      if (!input) return;
+      if (!_inputPatched.has(input)) {
+        _inputPatched.add(input);
+        input.takeUntrusted = () => ({});
+      }
+      for (const k in input.untrusted) delete input.untrusted[k];
+    } catch (_) { }
+  }, 500);
+
+  /* UA-CH ก็ต้องบอกว่า mobile ด้วย (บาง chunk อ่าน userAgentData.mobile เดี่ยว ๆ) */
+  try {
+    const uad = navigator.userAgentData;
+    if (uad) Object.defineProperty(uad, "mobile", { configurable: true, get: () => true });
+  } catch (_) { }
+
   /* ───── 3. matchMedia spoof ───── */
   const _origMM = window.matchMedia.bind(window);
   window.matchMedia = function matchMedia(query) {
@@ -173,6 +258,19 @@
   /* ───── 9. แปะ global helper สำหรับ esp.js ใช้งานต่อ ───── */
   window.__pbMobileSpoofActive = true;
   window.__pbRetryDevicePatch  = tryFindAndPatchDevice;
+
+  /* ตรวจสถานะในเกม: console → __pbMobileState() */
+  window.__pbMobileState = () => ({
+    spoof: window.__pbMobileSpoofActive === true,
+    ua: navigator.userAgent,
+    uaMobile: (() => { try { return navigator.userAgentData?.mobile ?? null; } catch (_) { return null; } })(),
+    platform: navigator.platform,
+    maxTouch: navigator.maxTouchPoints,
+    coarse: window.matchMedia("(pointer: coarse)").matches,
+    pcFlag: (() => { try { return sessionStorage.getItem(PC_KEY); } catch (_) { return null; } })(),
+    guardDropped: GUARD.dropped,
+    localDevice: (() => { try { return window.__pbMatchHost?.service?.("seeds")?.localDevice ?? null; } catch (_) { return null; } })(),
+  });
 
 })();
 

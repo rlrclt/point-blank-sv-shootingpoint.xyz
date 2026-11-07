@@ -1,20 +1,35 @@
 {
     "manifest_version": 3,
     "name": "PB ESP - TH",
-    "version": "2.3.3",
+    "version": "2.6.0",
     "action": {
         "default_title": "PB ESP - TH"
     },
     "description": "PB Mobile extension with ESP overlay, no-recoil, aim assist, and mobile bypass",
+    "minimum_chrome_version": "111",
+    "permissions": [
+        "storage",
+        "declarativeNetRequest",
+        "declarativeNetRequestWithHostAccess"
+    ],
+    "host_permissions": [
+        "*://shootingpoint.xyz/*",
+        "*://*.shootingpoint.xyz/*",
+        "ws://*.shootingpoint.xyz/*",
+        "wss://*.shootingpoint.xyz/*"
+    ],
+    "background": {
+        "service_worker": "bg.js"
+    },
     "content_scripts": [
         {
-            "matches": ["*://*.pbmobile-th.online/*"],
+            "matches": ["*://shootingpoint.xyz/*", "*://*.shootingpoint.xyz/*"],
             "js": ["mobile-spoof.js"],
             "run_at": "document_start",
             "world": "MAIN"
         },
         {
-            "matches": ["*://*.pbmobile-th.online/*"],
+            "matches": ["*://shootingpoint.xyz/*", "*://*.shootingpoint.xyz/*"],
             "js": ["injector.js"],
             "run_at": "document_start"
         }
@@ -22,7 +37,7 @@
     "web_accessible_resources": [
         {
             "resources": ["esp.js"],
-            "matches": ["*://*.pbmobile-th.online/*"]
+            "matches": ["*://shootingpoint.xyz/*", "*://*.shootingpoint.xyz/*"]
         }
     ]
 }
