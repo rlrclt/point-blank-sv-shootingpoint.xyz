@@ -64,9 +64,10 @@
     aimTrack: 1.0,     // feedforward ชดเชยเป้าที่เดิน/วิ่ง (0=ปิด, 1=เต็ม, >1=นำเป้า)
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
+    espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.54";
+  const VERSION = "v1.55";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -86,6 +87,19 @@
     try { localStorage.setItem(CFG_KEY, JSON.stringify(CFG)); } catch (_) { }
   }
   loadCfg();
+
+  /* ---------- UI state (panel position / active tab) ---------- */
+  const UI_KEY = "pbEspUi_v1";
+  function loadUi() {
+    try { return JSON.parse(localStorage.getItem(UI_KEY) || "{}") || {}; } catch (_) { return {}; }
+  }
+  function saveUi(patch) {
+    try {
+      const next = { ...loadUi(), ...patch };
+      localStorage.setItem(UI_KEY, JSON.stringify(next));
+    } catch (_) { }
+  }
+  const savedUi = loadUi();
 
   /* ---------- overlay canvas ---------- */
   const cv = document.createElement("canvas");
@@ -228,7 +242,8 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.54</span>
+      <span id="pbTitle">PB ESP v1.55</span>
+      <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
     </div>
@@ -243,14 +258,13 @@
     <div id="pbBody">
 
       <div class="pbPane" data-pane="core">
-        <div class="pbSec">FPS Counter</div>
+        <div class="pbSec">ตัวนับ FPS</div>
         <label><input type="checkbox" data-c="unlockFps"> ปลดล็อก FPS (ถ้าเกม/เบราว์เซอร์รองรับ)</label>
         <label><input type="checkbox" data-c="showFps"> แสดง FPS</label>
         <label>สไตล์ FPS <select id="pbFpsStyle"><option value="plain">เรียบ</option><option value="box">กล่อง</option><option value="neon">นีออน</option></select></label>
         <label><input type="checkbox" data-c="fpsLabel"> แสดงคำว่า FPS</label>
         <div class="pbHelp" id="pbFpsInfo">FPS setting: —</div>
-        <div class="pbSec">Movement / Spoof</div>
-        <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
+        <div class="pbSec">มือถือ / Spoof</div>
         <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
       </div>
 
@@ -262,7 +276,7 @@
           <input type="number" id="pbRecLvlNum" min="0" max="100" step="1" value="100"
             style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
-        <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น</div>
+        <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น · default 100%</div>
         <div id="pbCompRow" style="display:none">
           <label>ความแรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
           <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0">
@@ -281,7 +295,7 @@
           <input type="number" id="pbSprLvlNum" min="0" max="100" step="1" value="100"
             style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
-        <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0)</div>
+        <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0) · default 100%</div>
       </div>
 
       <div class="pbPane" data-pane="aim" style="display:none">
@@ -291,22 +305,28 @@
           <label><input type="radio" name="aimMode" value="bot" ${CFG.aimMode === "bot" ? "checked" : ""}> Full Bot</label>
           <label><input type="radio" name="aimMode" value="assist" ${CFG.aimMode === "assist" ? "checked" : ""}> Assist</label>
         </div>
+        <div class="pbRow" id="pbAimPresets">
+          <button type="button" data-preset="rifle">RIFLE</button>
+          <button type="button" data-preset="sniper">SNIPER</button>
+          <button type="button" data-preset="shotgun">SHOTGUN</button>
+          <button type="button" data-preset="default">ค่าเริ่มต้น</button>
+        </div>
         <label><input type="checkbox" data-c="aimVisibleOnly"> ไม่ทะลุกำแพง</label>
         <label><input type="checkbox" data-c="aimOnHold"> กดปุ่มค้างเพื่อ aim</label>
         <label><input type="checkbox" data-c="aimLock"> ล็อกเป้า (Target Lock)</label>
         <div class="pbHelp">รักษาเป้าเดิมเมื่อยังอยู่ใน FOV</div>
         <label><input type="checkbox" data-c="aimSmartZone"> Smart Zone</label>
         <div class="pbHelp">ถ้าจุดที่เลือกโดนบัง → เลือกจุดที่เห็นแทน</div>
-        <label>Hold button
+        <label>ปุ่มกดค้าง
           <button id="pbHoldBind" type="button">RMB</button>
         </label>
         <div class="pbHelp">คลิกแล้วกดปุ่ม/เมาส์ที่ต้องการ (Esc ยกเลิก)</div>
-        <div class="pbSec">Indicator</div>
+        <div class="pbSec">ตัวช่วยแสดง</div>
         <label><input type="checkbox" data-c="aimDrawFov"> วงกลม FOV</label>
         <label><input type="checkbox" data-c="aimDrawLock"> จุดล็อค (bone)</label>
         <label><input type="checkbox" data-c="aimDrawLink"> เส้น crosshair → จุดล็อค</label>
         <label><input type="checkbox" data-c="aimDrawPart"> ชื่อส่วนที่ล็อค</label>
-        <div class="pbSec">Tuning</div>
+        <div class="pbSec">ปรับละเอียด</div>
         <label>FOV <span id="pbFovVal">${CFG.aimFov}</span>°
           <input type="range" id="pbFovSlider" min="1" max="180" step="1" value="${CFG.aimFov}">
         </label>
@@ -319,14 +339,14 @@
         <label>Tracking <span id="pbTrackVal">${CFG.aimTrack}</span>
           <input type="range" id="pbTrackSlider" min="0" max="1.5" step="0.1" value="${CFG.aimTrack}">
         </label>
-        <label>Priority
+        <label>ลำดับเป้า
           <select id="pbPrioSelect">
             <option value="angle" ${CFG.aimPriority === "angle" ? "selected" : ""}>ใกล้ crosshair</option>
             <option value="dist" ${CFG.aimPriority === "dist" ? "selected" : ""}>ระยะใกล้ตัว</option>
             <option value="hp" ${CFG.aimPriority === "hp" ? "selected" : ""}>HP น้อยสุด</option>
           </select>
         </label>
-        <label>Bone
+        <label>จุดเล็ง
           <select id="pbBoneSelect">
             <option value="head">Head</option>
             <option value="neck">Neck</option>
@@ -335,22 +355,23 @@
             <option value="auto">Auto</option>
           </select>
         </label>
+        <div class="pbHelp">ค่าเริ่มต้น: FOV 180 · Smooth 6 · Prediction 30 · Tracking 1.0</div>
       </div>
 
       <div class="pbPane" data-pane="weapon" style="display:none">
-        <div class="pbSec">Fast Swap</div>
+        <div class="pbSec">สลับปืนเร็ว</div>
         <label><input type="checkbox" data-c="fastSwap"> เปลี่ยนปืนเร็ว</label>
         <div class="pbHelp">ย่อเวลาเปลี่ยนปืนเหลือค่าที่ตั้ง (เฉพาะตอนกำลังเปลี่ยน)</div>
-        <label>Swap time <span id="pbSwapVal">250</span> ms
+        <label>เวลาสลับ <span id="pbSwapVal">250</span> ms
           <input type="range" id="pbSwapSlider" min="50" max="1500" step="10" value="250">
         </label>
         <div class="pbRow">
           <input type="number" id="pbSwapNum" min="50" max="1500" step="10" value="250">
-          <button id="pbSwapReset" type="button">RESET</button>
+          <button id="pbSwapReset" type="button">รีเซ็ต</button>
           <span class="pbHelp" style="margin:0">default 250</span>
         </div>
 
-        <div class="pbSec">Bonus — Swap</div>
+        <div class="pbSec">โบนัส — สลับปืน</div>
         <label><input type="checkbox" data-c="statBonus"> เปิดโบนัส (ไม่ต้องมีไอเทม)</label>
         <label>โปรไฟล์สับไว
           <select id="pbSwapProfile"><option value="custom">กำหนดเอง</option></select>
@@ -363,7 +384,7 @@
           <input type="number" id="pbBonusSNum" min="0" max="0.9" step="0.01" value="0.5">
         </div>
 
-        <div class="pbSec">Bonus — Reload</div>
+        <div class="pbSec">โบนัส — รีโหลด</div>
         <label>โปรไฟล์รีโหลดไว
           <select id="pbReloadProfile"><option value="custom">กำหนดเอง</option></select>
         </label>
@@ -373,26 +394,45 @@
         </label>
         <div class="pbRow">
           <input type="number" id="pbBonusRNum" min="0" max="0.9" step="0.01" value="0.5">
-          <button id="pbBonusReset" type="button">RESET</button>
+          <button id="pbBonusReset" type="button">รีเซ็ต</button>
           <span class="pbHelp" style="margin:0">default 0.50 / 0.25</span>
         </div>
       </div>
 
       <div class="pbPane" data-pane="esp" style="display:none">
-        <div class="pbSec">Overlay</div>
+        <div class="pbSec">ออฟเลย์</div>
         <label><input type="checkbox" data-c="box"> กรอบตัว</label>
         <label><input type="checkbox" data-c="hpBar"> แถบ HP</label>
         <label><input type="checkbox" data-c="name"> ชื่อ + ระยะ</label>
         <label><input type="checkbox" data-c="headDot"> จุดหัว</label>
         <label><input type="checkbox" data-c="skeleton"> โครงข้อต่อ</label>
-        <label><input type="checkbox" data-c="perfMode"> Performance mode</label>
-        <div class="pbHelp">ปิด skeleton/box/hp/name/humanize เพื่อลด lag</div>
+        <label><input type="checkbox" data-c="snapline"> เส้นชี้เป้า</label>
+        <label><input type="checkbox" data-c="showAlly"> แสดงเพื่อนร่วมทีม</label>
+        <label><input type="checkbox" data-c="perfMode"> โหมดประหยัด</label>
+        <div class="pbHelp">โหมดประหยัด = ไม่วาด box/hp/name/skeleton ชั่วคราว (checkbox ไม่ถูกปิด)</div>
+        <div class="pbSec">สไตล์</div>
+        <label>สีศัตรู <input type="color" id="pbEnemyColor" value="${CFG.enemyColor}"></label>
+        <label>สีเพื่อน <input type="color" id="pbAllyColor" value="${CFG.allyColor}"></label>
+        <label>ความหนา <span id="pbThickVal">${CFG.espThickness}</span> px
+          <input type="range" id="pbThick" min="1" max="5" step="1" value="${CFG.espThickness}">
+        </label>
+        <label>ระยะวาด <span id="pbDistVal">${CFG.espMaxDist}</span> m
+          <input type="range" id="pbDist" min="50" max="300" step="10" value="${CFG.espMaxDist}">
+        </label>
+        <label>ขนาดชื่อ <span id="pbNameVal">${CFG.espNameSize}</span> px
+          <input type="range" id="pbNameSize" min="10" max="20" step="1" value="${CFG.espNameSize}">
+        </label>
+        <div class="pbHelp">ระยะวาด = ตัด actor ที่ไกลเกินค่าที่ตั้ง (default 200 m)</div>
       </div>
 
       <div class="pbPane" data-pane="safety" style="display:none">
-        <div class="pbSec">Bridge</div>
+        <div class="pbSec">หลัก</div>
+        <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
+        <div class="pbSec">คีย์ลัด</div>
+        <div class="pbHelp">F7 = Aimbot · F8 = ESP · F9 = NoRecoil · F10 = Panic (กด 2 ครั้ง) · Insert = ซ่อน/แสดงแผง</div>
+        <div class="pbSec">บริดจ์</div>
         <div class="pbHelp" id="pbBridgeInfo">bridge: —</div>
-        <div class="pbSec">Anti-Cheat</div>
+        <div class="pbSec">แอนตี้ชีต</div>
         <label><input type="checkbox" data-c="acShield"> ปิดการรายงาน anti-cheat (9007)</label>
         <label><input type="checkbox" data-c="panicOnAc"> Panic ทันทีเมื่อ AC แจ้งเตือน</label>
         <div class="pbHelp">AC ส่ง opcode 9007 เมื่อตรวจพบ — shield จะทิ้ง packet นั้น (warning ใน console ยังเห็น)</div>
@@ -406,20 +446,22 @@
         <div class="pbHelp">ไม่มีอะไรการันตี 100% — เซิร์ฟเวอร์ยังตัดสินจากพฤติกรรม (hit-rate, drop/pickup ผิดปกติ) ได้เสมอ</div>
       </div>
 
+      <div id="pbFeatureLine">—</div>
       <div id="pbStatus">—</div>
     </div>`;
 
   const css = document.createElement("style");
   css.textContent = `
-    #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:238px;
+    #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:264px;
+      max-width:calc(100vw - 16px);
       background:#120b0e;border:1px solid #4a262b;border-radius:0;
-      font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#f4e7e9;user-select:none;
+      font:12px/1.4 'Segoe UI',Tahoma,sans-serif;color:#f4e7e9;user-select:none;
       box-shadow:0 14px 34px #000b;overflow:hidden;}
     #pbEspPanel #pbh{background:#170d11;}
     #pbEspPanel #pbTabs{display:flex;background:#120b0e;border-bottom:1px solid #3a2227;}
-    #pbEspPanel #pbTabs button{flex:1 1 0;min-width:0;padding:7px 0;background:transparent;border:0;
-      border-bottom:2px solid transparent;color:#ab8b91;font:700 7.5px 'Segoe UI';
-      letter-spacing:.4px;cursor:pointer;border-radius:0;white-space:nowrap;overflow:hidden;}
+    #pbEspPanel #pbTabs button{flex:1 1 0;min-width:0;padding:8px 0;background:transparent;border:0;
+      border-bottom:2px solid transparent;color:#ab8b91;font:700 8.5px 'Segoe UI';
+      letter-spacing:.3px;cursor:pointer;border-radius:0;white-space:nowrap;overflow:hidden;}
     #pbEspPanel #pbTabs button.on{color:#ff4d5a;border-bottom-color:#ff4d5a;background:#1b1013;}
     #pbEspPanel #pbBody{padding:0;display:block;max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:hidden;}
     #pbEspPanel #pbBody::-webkit-scrollbar{width:7px;}
@@ -427,8 +469,8 @@
     #pbEspPanel .pbSec{color:#78838f;font:700 9px 'Segoe UI';letter-spacing:1.6px;
       text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #ff4d5a;
       background:#120b0e;border-bottom:1px solid #20262c;}
-    #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:23px;
-      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11px;color:#e7ced2;}
+    #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:24px;
+      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11.5px;color:#e7ced2;}
     #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#ff4d5a;margin:0;cursor:pointer;}
     #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;
       background:transparent;margin:3px 0 4px;padding:0 10px;cursor:pointer;}
@@ -436,7 +478,9 @@
     #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:13px;
       margin-top:-6px;background:#ff4d5a;border:0;}
     #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#160d10;
-      color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
+      color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10.5px 'Segoe UI';padding:3px 6px;}
+    #pbEspPanel input[type=color]{width:34px;height:20px;padding:0;border:1px solid #45262c;
+      background:#160d10;cursor:pointer;}
     #pbEspPanel select{max-width:150px;}
     #pbEspPanel input[type=number]{width:64px;text-align:right;}
     #pbEspPanel button{cursor:pointer;text-transform:uppercase;letter-spacing:.8px;}
@@ -447,7 +491,15 @@
     #pbEspPanel .pbSeg label{flex:1;justify-content:center;border-bottom:0;}
     #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #3a2227;
       background:#120b0e;color:#ffb3b8;font:10px Consolas,monospace;}
-    #pbEspPanel .pbHelp{font-size:9px;color:#a37f86;line-height:1.4;margin:0;padding:0 10px 5px;}
+    #pbEspPanel .pbHelp{font-size:9.5px;color:#a37f86;line-height:1.4;margin:0;padding:0 10px 5px;}
+    #pbEspPanel #pbFeatureLine{margin:0;padding:3px 10px;border-top:1px solid #3a2227;
+      background:#140c0f;color:#ffd27a;font:600 9.5px 'Segoe UI';letter-spacing:.4px;}
+    #pbEspPanel #pbMasterChip{margin-left:auto;margin-right:4px;padding:1px 5px;border:1px solid #5a2a2a;
+      color:#ff4d5a;font:700 8px 'Segoe UI';letter-spacing:.5px;cursor:pointer;}
+    #pbEspPanel #pbMasterChip.off{border-color:#45262c;color:#a37f86;}
+    #pbEspPanel #pbAcChip{margin-right:6px;padding:1px 5px;border:1px solid #5a2a2a;
+      color:#ffd27a;font:700 8px 'Segoe UI';letter-spacing:.5px;cursor:pointer;}
+    #pbEspPanel #pbAcChip.off{border-color:#45262c;color:#a37f86;}
     #pbEspPanel input[type=text]{flex:1;min-width:0;background:#160d10;color:#f4e7e9;
       border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
     #pbEspPanel input[type=text]:focus{outline:0;border-color:#ff4d5a;}
@@ -456,6 +508,8 @@
       border-radius:0;letter-spacing:1px;}
     #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a}
     #pbEspPanel label:hover{background:rgba(255,77,90,.06)}
+    #pbEspPanel button:disabled,#pbEspPanel input:disabled,#pbEspPanel select:disabled{opacity:.35;cursor:not-allowed;}
+    #pbEspPanel #pbAimPresets button{padding:3px 4px;font-size:8.5px;letter-spacing:.2px;}
   `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
@@ -463,20 +517,115 @@
 
 
   const tabBar = panel.querySelector("#pbTabs");
+  const bodyEl = panel.querySelector("#pbBody");
+  const scrollByTab = new Map();
+  let currentTab = "";
   const showTab = (name) => {
+    if (currentTab) scrollByTab.set(currentTab, bodyEl.scrollTop);
     for (const b of tabBar.querySelectorAll("button[data-tab]")) {
       b.classList.toggle("on", b.dataset.tab === name);
     }
     for (const p of panel.querySelectorAll("#pbBody .pbPane")) {
       p.style.display = p.dataset.pane === name ? "block" : "none";
     }
+    currentTab = name;
+    bodyEl.scrollTop = scrollByTab.get(name) || 0;
+    saveUi({ tab: name });
   };
   tabBar.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-tab]");
     if (b) showTab(b.dataset.tab);
   });
 
-  showTab("core");
+  if (Number.isFinite(savedUi.left) && Number.isFinite(savedUi.top)) {
+    const l = Math.max(0, Math.min(savedUi.left, Math.max(0, innerWidth - 80)));
+    const t = Math.max(0, Math.min(savedUi.top, Math.max(0, innerHeight - 40)));
+    panel.style.left = l + "px";
+    panel.style.top = t + "px";
+    panel.style.right = "auto";
+  }
+  const startTab = savedUi.tab && panel.querySelector(`.pbPane[data-pane="${savedUi.tab}"]`)
+    ? savedUi.tab : "core";
+  showTab(startTab);
+
+  const masterChip = panel.querySelector("#pbMasterChip");
+  const updateMasterChip = () => {
+    if (!masterChip) return;
+    masterChip.textContent = CFG.enabled ? "ESP ON" : "ESP OFF";
+    masterChip.classList.toggle("off", !CFG.enabled);
+    masterChip.title = CFG.enabled ? "ESP เปิดอยู่ — คลิกเพื่อปิด (F8)" : "ESP ปิด — คลิกเพื่อเปิด (F8)";
+  };
+  if (masterChip) {
+    masterChip.addEventListener("click", () => {
+      CFG.enabled = !CFG.enabled;
+      const c = panel.querySelector('input[data-c="enabled"]');
+      if (c) c.checked = CFG.enabled;
+      saveCfg();
+      updateMasterChip();
+      updateFeatureLine();
+    });
+  }
+  updateMasterChip();
+
+  const featureLine = panel.querySelector("#pbFeatureLine");
+  const updateFeatureLine = () => {
+    if (!featureLine) return;
+    const bits = [];
+    if (CFG.aimAssist) bits.push("AIM");
+    if (CFG.enabled) bits.push("ESP");
+    if (CFG.noRecoil) bits.push("RECOIL");
+    if (CFG.noSpread) bits.push("SPREAD");
+    if (CFG.humanize) bits.push("HUMAN");
+    if (CFG.fakeMobile) bits.push("MOBILE");
+    featureLine.textContent = bits.length ? bits.join(" · ") : "ไม่มีฟีเจอร์เปิด";
+  };
+  updateFeatureLine();
+
+  /* ESP style controls */
+  const enemyColorInput = panel.querySelector("#pbEnemyColor");
+  const allyColorInput = panel.querySelector("#pbAllyColor");
+  if (enemyColorInput) {
+    enemyColorInput.addEventListener("input", () => {
+      CFG.enemyColor = enemyColorInput.value;
+      saveCfg();
+    });
+  }
+  if (allyColorInput) {
+    allyColorInput.addEventListener("input", () => {
+      CFG.allyColor = allyColorInput.value;
+      saveCfg();
+    });
+  }
+  const thickSlider = panel.querySelector("#pbThick");
+  const thickVal = panel.querySelector("#pbThickVal");
+  if (thickSlider) {
+    thickSlider.value = CFG.espThickness;
+    thickSlider.addEventListener("input", () => {
+      CFG.espThickness = parseInt(thickSlider.value, 10) || 2;
+      if (thickVal) thickVal.textContent = CFG.espThickness;
+      saveCfg();
+    });
+  }
+  const distSlider = panel.querySelector("#pbDist");
+  const distVal = panel.querySelector("#pbDistVal");
+  if (distSlider) {
+    distSlider.value = CFG.espMaxDist;
+    distSlider.addEventListener("input", () => {
+      CFG.espMaxDist = parseInt(distSlider.value, 10) || 200;
+      if (distVal) distVal.textContent = CFG.espMaxDist;
+      saveCfg();
+    });
+  }
+  const nameSizeSlider = panel.querySelector("#pbNameSize");
+  const nameSizeVal = panel.querySelector("#pbNameVal");
+  if (nameSizeSlider) {
+    nameSizeSlider.value = CFG.espNameSize;
+    nameSizeSlider.addEventListener("input", () => {
+      CFG.espNameSize = parseInt(nameSizeSlider.value, 10) || 13;
+      if (nameSizeVal) nameSizeVal.textContent = CFG.espNameSize;
+      saveCfg();
+    });
+  }
 
   const acChip = panel.querySelector("#pbAcChip");
   const updateAcChip = () => {
@@ -523,6 +672,8 @@
     c.addEventListener("change", () => {
       CFG[key] = c.checked;
       saveCfg();
+      syncDependentControls();
+      updateFeatureLine();
       /* The mobile spoof is applied by mobile-spoof.js before this UI exists, so
          the choice has to be written to storage and the page reloaded for it to
          take effect — that is the only way to make the client re-initialise as a
@@ -665,6 +816,33 @@
       saveCfg();
     });
   }
+  /* Aim presets */
+  const AIM_PRESETS = {
+    rifle: { fov: 45, smooth: 5, predict: 35, track: 0.6 },
+    sniper: { fov: 22, smooth: 7, predict: 20, track: 0.4 },
+    shotgun: { fov: 60, smooth: 4, predict: 10, track: 0.8 },
+    default: { fov: 180, smooth: 6, predict: 30, track: 1.0 },
+  };
+  for (const b of panel.querySelectorAll("#pbAimPresets button")) {
+    b.addEventListener("click", () => {
+      const p = AIM_PRESETS[b.dataset.preset];
+      if (!p) return;
+      CFG.aimFov = p.fov;
+      CFG.aimSmooth = p.smooth;
+      CFG.aimPredictMs = p.predict;
+      CFG.aimTrack = p.track;
+      if (fovSlider) fovSlider.value = p.fov;
+      if (fovVal) fovVal.textContent = p.fov;
+      if (smSlider) smSlider.value = p.smooth;
+      if (smVal) smVal.textContent = p.smooth;
+      if (predSlider) predSlider.value = p.predict;
+      if (predVal) predVal.textContent = p.predict;
+      if (trackSlider) trackSlider.value = p.track;
+      if (trackVal) trackVal.textContent = p.track;
+      saveCfg();
+      setStatus(`AIM preset: ${b.dataset.preset}`);
+    });
+  }
   /* fast weapon swap — slider, typed number, reset */
   const swapSlider = panel.querySelector("#pbSwapSlider");
   const swapNum = panel.querySelector("#pbSwapNum");
@@ -738,6 +916,20 @@
   });
   setBonus("bonusReload", CFG.bonusReload, false);
   setBonus("bonusSwap", CFG.bonusSwap, false);
+
+  function syncDependentControls() {
+    const dis = (sel, off) => {
+      for (const el of panel.querySelectorAll(sel)) el.disabled = !!off;
+    };
+    dis("#pbRecLvl, #pbRecLvlNum, #pbCompSlider", !CFG.noRecoil);
+    dis("#pbSprLvl, #pbSprLvlNum", !CFG.noSpread);
+    dis("#pbHumanNet", !CFG.humanize);
+    dis("#pbFpsStyle, input[data-c='fpsLabel']", !CFG.showFps);
+    dis("#pbSwapSlider, #pbSwapNum, #pbSwapReset", !CFG.fastSwap);
+    dis("#pbBonusSSlider, #pbBonusSNum, #pbBonusRSlider, #pbBonusRNum, #pbBonusReset, #pbSwapProfile, #pbReloadProfile", !CFG.statBonus);
+    dis("#pbFovSlider, #pbSmSlider, #pbPredSlider, #pbTrackSlider, #pbPrioSelect, #pbBoneSelect, #pbHoldBind, #pbAimPresets button", !CFG.aimAssist);
+  }
+  syncDependentControls();
 
   const boneSelect = panel.querySelector("#pbBoneSelect");  if (boneSelect) {
     boneSelect.value = CFG.aimBone;
@@ -816,7 +1008,13 @@
     panel.style.top = (e.clientY - drag.oy) + "px";
     panel.style.right = "auto";
   });
-  head.addEventListener("pointerup", () => { drag = null; });
+  head.addEventListener("pointerup", () => {
+    if (drag) {
+      drag = null;
+      const r = panel.getBoundingClientRect();
+      saveUi({ left: Math.round(r.left), top: Math.round(r.top) });
+    }
+  });
 
   // F7 / F8 / F9
   addEventListener("keydown", (e) => {
@@ -2504,10 +2702,11 @@
     const e0 = cam.matrixWorld.elements;
     const camPos = [e0[12], e0[13], e0[14]];
 
-    ctx.lineWidth = 2 * dpr;
+    ctx.lineWidth = Math.max(1, Number(CFG.espThickness) || 2) * dpr;
+    const maxDist = Math.max(50, Number(CFG.espMaxDist) || 200);
      let skelDrawn = 0;
      const SKEL_MAX = 3;
-    ctx.font = `bold ${13 * dpr}px Tahoma, sans-serif`;
+    ctx.font = `bold ${Math.max(10, Number(CFG.espNameSize) || 13) * dpr}px Tahoma, sans-serif`;
     ctx.textBaseline = "top";
     const pos = [0, 0, 0];
     for (const a of actors) {
@@ -2522,8 +2721,9 @@
       if (!fH) continue;
       const col = ally ? CFG.allyColor : CFG.enemyColor;
       const dist = Math.hypot(pos[0] - camPos[0], pos[1] - camPos[1], pos[2] - camPos[2]);
+      if (dist > maxDist) continue;
       const bh = Math.max(1, fF.y - fH.y), bw = bh * 0.45, x = (fF.x + fH.x) / 2;
-       const far = dist > 120;
+       const far = dist > maxDist * 0.75;
       ctx.globalAlpha = a.alive ? 1 : CFG.deadAlpha;
 
       if (CFG.box && !CFG.perfMode && !far && bh > 6) {
@@ -2565,7 +2765,7 @@
         ctx.fillStyle = skelCol;
         ctx.globalAlpha = a.alive ? 0.9 : CFG.deadAlpha * 0.8;
         // ไกลเกิน 80m วาดไปก็อ่านไม่ออก + เปลือง CPU (project ทุกกระดูก)
-        if (dist < 120 && skelDrawn < SKEL_MAX) { try { drawSkeleton(a, cam, 1.25 * dpr); skelDrawn++; } catch (err) { console.warn("[ESP] skeleton draw fail:", err); } }
+        if (dist < maxDist && skelDrawn < SKEL_MAX) { try { drawSkeleton(a, cam, 1.25 * dpr); skelDrawn++; } catch (err) { console.warn("[ESP] skeleton draw fail:", err); } }
         ctx.globalAlpha = a.alive ? 1 : CFG.deadAlpha;
       }
       ctx.globalAlpha = 1;
@@ -2966,6 +3166,7 @@
   }, false);
 
   function panicNow() {
+    panicArmedAt = 0;
     CFG.enabled = false;
     CFG.aimAssist = false;
     CFG.noRecoil = false;
@@ -2979,11 +3180,22 @@
       if (Object.prototype.hasOwnProperty.call(CFG, c.dataset.c)) c.checked = !!CFG[c.dataset.c];
     }
     saveCfg();
+    syncDependentControls();
     try { setMenu(false); } catch (_) { }
     statusHold("PANIC: ปิดฟีเจอร์ทั้งหมดแล้ว (Insert เพื่อเปิดแผง)");
   }
+  let panicArmedAt = 0;
+  function requestPanic() {
+    const now = performance.now();
+    if (panicArmedAt && now - panicArmedAt < 2000) {
+      panicNow();
+      return;
+    }
+    panicArmedAt = now;
+    statusHold("ยืนยัน PANIC: กด F10 / ปุ่ม PANIC อีกครั้งภายใน 2 วินาที", 2000);
+  }
   const panicBtn = panel.querySelector("#pbPanic");
-  if (panicBtn) panicBtn.addEventListener("click", panicNow);
+  if (panicBtn) panicBtn.addEventListener("click", requestPanic);
   addEventListener("keydown", (e) => {
     if (e.code !== "F10" && e.key !== "F10") return;
     const t = e.target;
@@ -2991,7 +3203,7 @@
     if (typing) return;
     e.preventDefault();
     e.stopPropagation();
-    panicNow();
+    requestPanic();
   }, true);
 
 
@@ -3003,6 +3215,8 @@
       acEl.textContent = `AC shield: ${CFG.acShield ? "ON" : "OFF"} · blocked ${window.__pbAcBlocked || 0}`;
     }
     updateAcChip();
+    updateMasterChip();
+    updateFeatureLine();
     const bridgeEl = panel.querySelector("#pbBridgeInfo");
     if (bridgeEl) {
       const r = findRenderer();

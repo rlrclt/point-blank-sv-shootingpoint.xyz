@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.54 · `manifest.json` 2.8.19
+- `esp.js` v1.55 · `manifest.json` 2.8.20
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -22,14 +22,19 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 
 | แท็บ | มีอะไร |
 |---|---|
-| CORE | FPS counter, เปิด ESP, ปลอมเป็น Mobile |
+| CORE | FPS counter, ปลดล็อก FPS, ปลอมเป็น Mobile |
 | COMBAT | NoRecoil, NoSpread, Humanize |
-| AIM | aimbot, indicator, tuning |
-| ESP | overlay ทั้งหมด |
+| AIM | aimbot, preset (Rifle/Sniper/Shotgun), indicator, tuning |
+| ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
-| SAFETY | bridge, **Anti-Cheat (ปิดรายงาน 9007)**, panic |
+| SAFETY | master switch, คีย์ลัด, bridge, Anti-Cheat, panic |
 
-> สถานะ AC ดูได้จากชิป **AC SHIELD ON/OFF** ที่หัวแผง — คลิกเพื่อไปแท็บ SAFETY
+> - ชิป **ESP ON/OFF** ที่หัวแผง = เปิด/ปิด master (F8)
+> - ชิป **AC** = สถานะ AC shield — คลิกไป SAFETY
+> - แถบสรุปด้านล่างแสดงฟีเจอร์ที่เปิดอยู่
+> - แผงจำตำแหน่ง + แท็บล่าสุด และ scroll แยกตามแท็บ
+> - PANIC ต้องกด 2 ครั้งภายใน 2 วินาที
+> - ตัวเลือกที่ยังไม่เปิดจะถูก disable (slider ไม่ทำงานจนกว่าจะเปิดฟีเจอร์)
 
 ## FPS unlock
 
