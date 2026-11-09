@@ -64,12 +64,13 @@
     aimSmartZone: true,// ถ้าจุดที่เลือกโดนบัง → ยิงจุดที่เห็นจริงแทน (หัว/อก/แขน)
     aimPredictMs: 30,  // lead time (ms) ชดเชยความหน่วงของ netcode (moving target: 30-50 แนะนำ)
     aimTrack: 1.0,     // feedforward ชดเชยเป้าที่เดิน/วิ่ง (0=ปิด, 1=เต็ม, >1=นำเป้า)
+    aimVisTolerance: 0.12, // เมตร: เผื่อ ray ชนขอบสิ่งกีดขวางเล็ก ๆ (0 = เข้มสุด)
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.61";
+  const VERSION = "v1.62";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -244,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.61</span>
+      <span id="pbTitle">PB ESP v1.62</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -345,6 +346,10 @@
         <label>Tracking <span id="pbTrackVal">${CFG.aimTrack}</span>
           <input type="range" id="pbTrackSlider" min="0" max="1.5" step="0.1" value="${CFG.aimTrack}">
         </label>
+        <label>เผื่อสิ่งกีดขวาง <span id="pbVisTolVal">${CFG.aimVisTolerance}</span> m
+          <input type="range" id="pbVisTol" min="0" max="0.35" step="0.01" value="${CFG.aimVisTolerance}">
+        </label>
+        <div class="pbHelp">ยิงลอดขอบ/ราว/สิ่งกีดขวางเล็ก ๆ — 0 = เข้มที่สุด, 0.12 = ค่าเริ่มต้น</div>
         <label>ลำดับเป้า
           <select id="pbPrioSelect">
             <option value="angle" ${CFG.aimPriority === "angle" ? "selected" : ""}>ใกล้ crosshair</option>
@@ -850,6 +855,17 @@
       saveCfg();
     });
   }
+  const visTol = panel.querySelector("#pbVisTol");
+  const visTolVal = panel.querySelector("#pbVisTolVal");
+  if (visTol) {
+    visTol.value = CFG.aimVisTolerance == null ? 0.12 : CFG.aimVisTolerance;
+    if (visTolVal) visTolVal.textContent = Number(visTol.value).toFixed(2);
+    visTol.addEventListener("input", () => {
+      CFG.aimVisTolerance = Math.max(0, Math.min(0.35, parseFloat(visTol.value) || 0));
+      if (visTolVal) visTolVal.textContent = CFG.aimVisTolerance.toFixed(2);
+      saveCfg();
+    });
+  }
   /* Aim presets */
   const AIM_PRESETS = {
     rifle: { fov: 45, smooth: 5, predict: 35, track: 0.6 },
@@ -961,7 +977,7 @@
     dis("#pbFpsStyle, input[data-c='fpsLabel']", !CFG.showFps);
     dis("#pbSwapSlider, #pbSwapNum, #pbSwapReset", !CFG.fastSwap);
     dis("#pbBonusSSlider, #pbBonusSNum, #pbBonusRSlider, #pbBonusRNum, #pbBonusReset, #pbSwapProfile, #pbReloadProfile", !CFG.statBonus);
-    dis("#pbFovSlider, #pbSmSlider, #pbPredSlider, #pbTrackSlider, #pbPrioSelect, #pbBoneSelect, #pbHoldBind, #pbAimPresets button", !CFG.aimAssist);
+    dis("#pbFovSlider, #pbSmSlider, #pbPredSlider, #pbTrackSlider, #pbVisTol, #pbPrioSelect, #pbBoneSelect, #pbHoldBind, #pbAimPresets button", !CFG.aimAssist);
   }
   syncDependentControls();
 
@@ -1410,7 +1426,7 @@
   }
 
   // true = โล่ง | false = โดนบัง | null = ตรวจไม่ได้
-  function pointVisible(pb, cam, x, y, z) {
+  function pointVisible(pb, cam, x, y, z, sample = true) {
     if (!CFG.aimVisibleOnly) return true;
     const e = cam?.matrixWorld?.elements;
     if (!e) return null;
@@ -1419,8 +1435,25 @@
     if (Math.hypot(x - ox, y - oy, z - oz) < 1.2) return true;
     const blocked = rayBlocked(pb, ox, oy, oz, x, y, z);
     if (blocked === false) return true;
-    if (blocked === true) return false;
-    return null;
+    if (blocked === null) return null;
+
+    /* ray เส้นเดียวชนขอบ/ราว/สิ่งกีดขวางเล็ก ๆ ทั้งที่ยิงลอดได้ —
+       ลองยิงจุดรอบ ๆ เป้าเล็กน้อย (tolerance) แล้วยอมรับถ้ามีเส้นใดโล่ง */
+    const tol = Math.max(0, Math.min(0.35, Number(CFG.aimVisTolerance) || 0));
+    if (tol <= 0 || !sample) return false;
+    const rx = e[0], ry = e[1], rz = e[2];
+    const ux = e[4], uy = e[5], uz = e[6];
+    const offs = [
+      [tol, 0], [-tol, 0], [0, tol], [0, -tol],
+    ];
+    for (const [a, b] of offs) {
+      const px = x + rx * a + ux * b;
+      const py = y + ry * a + uy * b;
+      const pz = z + rz * a + uz * b;
+      const b2 = rayBlocked(pb, ox, oy, oz, px, py, pz);
+      if (b2 === false) return true;
+    }
+    return false;
   }
 
   /* ---------- เลือกจุดเล็ง: เอาจุดที่ "เห็นจริง" ตามลำดับความสำคัญ ---------- */
@@ -1506,7 +1539,7 @@
       if (_visChecked >= 16) break; // cap raycast — เผื่อกรณีเห็นแค่ครึ่งตัว/ขา
       if (!candWorld(it.c, out)) continue;
       _visChecked++;
-      const vis = pointVisible(pb, cam, out[0], out[1], out[2]);
+      const vis = pointVisible(pb, cam, out[0], out[1], out[2], _visChecked <= 8);
       if (vis === true) {
         _choiceCache.set(a, { t: now, mode, block: blockSig, cands, cand: it.c });
         _lastAimPart = it.c.part || it.c.zone || mode;

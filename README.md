@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.61 · `manifest.json` 2.8.26
+- `esp.js` v1.62 · `manifest.json` 2.8.27
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -51,6 +51,8 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
   (หัว/คอ/ลำตัว/ต้นแขน/ปลายแขน/มือ/ต้นขา/น่อง/เท้า)
 - ถ้าเลือกจุดเฉพาะแล้วไม่เห็น จะ fallback ไปส่วนที่เห็นตามลำดับของโซน
   (ปิด Smart Zone เพื่อล็อคเฉพาะส่วนที่เลือกเท่านั้น)
+- **เผื่อสิ่งกีดขวาง** (0–0.35 m) = ยิงจุดรอบเป้าเพิ่มเมื่อ ray หลักชนขอบ/ราว
+  ทำให้ล็อคผ่านช่องเล็ก ๆ ได้โดยไม่ทะลุกำแพงหนา
 
 ## FPS unlock
 
