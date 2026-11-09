@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.66 · `manifest.json` 2.8.31
+- `esp.js` v1.67 · `manifest.json` 2.8.32
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
