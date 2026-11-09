@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="referrer" content="no-referrer" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PB Index - Point Blank Item Catalog</title>
+<meta name="description" content="Local, searchable catalog of Point Blank weapons, cosmetics, maps, and attachments extracted from the client asset map." />
+<style>
+  :root {
+    --bg: #070b12;
+    --bg-2: #0a101b;
+    --panel: #0e1522;
+    --panel-2: #121b2b;
+    --line: #1b283d;
+    --line-soft: #162032;
+    --text: #dbe7f7;
+    --muted: #7b8ca6;
+    --dim: #51627a;
+    --accent: #36c6ff;
+    --gold: #f5c451;
+    --good: #43d98b;
+    --weapons: #36c6ff;
+    --cosmetics: #d977ff;
+    --maps: #43d98b;
+    --attachments: #f5c451;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .45);
+    --font: "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(54, 198, 255, .10), transparent 60%),
+      radial-gradient(700px 420px at 0% 0%, rgba(217, 119, 255, .07), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  ::selection { background: rgba(54, 198, 255, .3); }
+
+  /* header */
+  .top {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px clamp(14px, 3vw, 32px);
+    background: rgba(7, 11, 18, .82);
+    border-bottom: 1px solid var(--line-soft);
+    backdrop-filter: blur(14px);
+  }
+  .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .brand .mark {
+    width: 38px; height: 38px; flex: none; border-radius: 10px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #123049, #0a1624);
+    border: 1px solid #26537a;
+    color: var(--accent);
+    font-weight: 800; font-size: 12px; letter-spacing: .08em;
+    box-shadow: inset 0 0 18px rgba(54, 198, 255, .18);
+  }
+  .brand h1 { margin: 0; font-size: 17px; letter-spacing: .2px; white-space: nowrap; }
+  .brand p { margin: 1px 0 0; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .top .spacer { flex: 1; }
+  .search {
+    position: relative; flex: 1 1 420px; max-width: 620px;
+  }
+  .search input {
+    width: 100%; height: 40px; padding: 0 42px 0 38px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    outline: none;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(54, 198, 255, .12); }
+  .search .ico {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--dim); pointer-events: none;
+  }
+  .search kbd {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--dim); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1px 7px; font-size: 11px; background: var(--panel-2);
+    pointer-events: none;
+  }
+  .top-actions { display: flex; gap: 8px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    height: 38px; padding: 0 13px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    color: var(--text); white-space: nowrap;
+  }
+  .btn:hover { border-color: #2d4666; background: var(--panel-2); }
+  .btn.primary { background: linear-gradient(180deg, #13344b, #0d2133); border-color: #2b6187; color: #dff4ff; }
+  .btn.ghost { background: transparent; }
+  .btn.sm { height: 30px; padding: 0 10px; font-size: 12px; border-radius: 7px; }
+  .btn[disabled] { opacity: .45; cursor: default; }
+
+  /* layout */
+  .layout {
+    display: grid; grid-template-columns: 228px minmax(0, 1fr);
+    gap: clamp(14px, 2vw, 26px);
+    padding: 20px clamp(14px, 3vw, 32px) 70px;
+    max-width: 1680px; margin: 0 auto;
+  }
+  .side { position: sticky; top: 84px; align-self: start; }
+  .side-title { color: var(--dim); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 8px 4px; }
+  .cats { display: flex; flex-direction: column; gap: 5px; }
+  .cat {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border-radius: 9px; border: 1px solid transparent;
+    background: transparent; color: var(--muted); text-align: left;
+  }
+  .cat:hover { background: var(--panel); color: var(--text); }
+  .cat[aria-current="true"] { background: var(--panel); border-color: var(--line); color: var(--text); }
+  .cat .dot { width: 8px; height: 8px; border-radius: 3px; background: var(--cat, var(--accent)); box-shadow: 0 0 10px color-mix(in srgb, var(--cat, var(--accent)) 60%, transparent); }
+  .cat .label { flex: 1; font-size: 13px; }
+  .cat .n { font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .cat[aria-current="true"] .n { color: var(--muted); }
+
+  .side-card {
+    margin-top: 18px; padding: 11px 12px; border: 1px solid var(--line);
+    background: var(--panel); border-radius: 10px; color: var(--muted); font-size: 11.5px;
+  }
+  .side-card b { color: var(--text); }
+  .side-card .row { display: flex; justify-content: space-between; gap: 8px; }
+  .side-card .row + .row { margin-top: 4px; }
+
+  /* main */
+  .main { min-width: 0; }
+  .hero {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+    gap: 14px; margin-bottom: 16px;
+  }
+  .hero h2 { margin: 0; font-size: 24px; letter-spacing: .2px; }
+  .hero h2 span { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .hero p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; max-width: 760px; }
+  .hero .stamp { color: var(--dim); font-size: 11px; text-align: right; }
+
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 12px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); margin-bottom: 14px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--line); background: transparent; color: var(--muted);
+    border-radius: 999px; padding: 5px 11px; font-size: 12px; white-space: nowrap;
+  }
+  .chip:hover { border-color: #2d4666; color: var(--text); }
+  .chip[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--cat, var(--accent)) 18%, transparent);
+    border-color: color-mix(in srgb, var(--cat, var(--accent)) 55%, transparent);
+    color: var(--text); font-weight: 600;
+  }
+  .chip .n { color: var(--dim); font-weight: 400; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  select.field {
+    height: 34px; padding: 0 10px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; color: var(--text); outline: none;
+  }
+  select.field:focus { border-color: var(--accent); }
+  .filters .sep { flex: 1; }
+  .filters .meta { color: var(--muted); font-size: 12px; }
+  .filters .meta b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* grid */
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 10px;
+  }
+  .card {
+    position: relative; display: flex; flex-direction: column;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px; min-width: 0; text-align: left; color: var(--text);
+    transition: border-color .14s ease, transform .14s ease;
+  }
+  .card:hover { border-color: color-mix(in srgb, var(--cat, var(--accent)) 55%, var(--line)); transform: translateY(-2px); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .thumb {
+    position: relative; height: 108px; border-radius: 9px; overflow: hidden;
+    border: 1px solid var(--line-soft);
+    background:
+      radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--cat, var(--accent)) 12%, transparent), transparent 70%),
+      linear-gradient(180deg, #0c1421, #09101a);
+    color: color-mix(in srgb, var(--cat, var(--accent)) 82%, white 6%);
+  }
+  .thumb::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(80% 80% at 50% 50%, #000 30%, transparent 100%);
+    pointer-events: none;
+  }
+  .thumb svg { position: absolute; inset: 8%; width: 84%; height: 84%; filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+  .thumb .shot {
+    position: absolute; inset: 7% 5%; width: 90%; height: 86%;
+    object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,.45));
+  }
+  .thumb .crop, .sheet-art .crop {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); overflow: hidden;
+  }
+  .thumb .crop img, .sheet-art .crop img {
+    position: absolute; max-width: none; transform-origin: 0 0;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.4));
+  }
+  .sheet-art .shot { position: absolute; inset: 6% 5%; width: 90%; height: 88%; object-fit: contain; }
+  .thumb.has-img::after { opacity: .45; }
+  .thumb .ghost {
+    position: absolute; right: 8px; bottom: 6px; font-size: 10px; letter-spacing: .1em;
+    color: var(--dim); text-transform: uppercase;
+  }
+  .card h3 {
+    margin: 9px 2px 0; font-size: 13.5px; font-weight: 600; line-height: 1.3;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .card .sub {
+    margin: 3px 2px 0; color: var(--dim); font-size: 11px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .card .tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 2px 0; }
+  .tag {
+    font-size: 10.5px; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 5px; padding: 1px 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tag.cls { color: color-mix(in srgb, var(--cat, var(--accent)) 80%, white); border-color: color-mix(in srgb, var(--cat, var(--accent)) 32%, transparent); }
+  .card .kbd-id {
+    position: absolute; top: 14px; left: 14px; font-size: 10px; color: var(--dim);
+    background: rgba(7, 11, 18, .72); border: 1px solid var(--line-soft); border-radius: 5px;
+    padding: 1px 5px; font-variant-numeric: tabular-nums;
+  }
+
+  .empty {
+    grid-column: 1 / -1; border: 1px dashed var(--line); border-radius: var(--radius);
+    padding: 50px 20px; text-align: center; color: var(--muted);
+  }
+  .empty b { color: var(--text); display: block; margin-bottom: 4px; }
+  .sentinel { height: 1px; margin-top: 18px; }
+  .loading { color: var(--dim); text-align: center; font-size: 12px; padding: 14px 0; }
+
+  /* dialog */
+  dialog.sheet {
+    width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 32px);
+    margin: auto; padding: 0; border: 1px solid var(--line);
+    border-radius: 14px; background: var(--bg-2); color: var(--text);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  dialog.sheet::backdrop { background: rgba(3, 6, 10, .7); backdrop-filter: blur(3px); }
+  .sheet-head {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+    border-bottom: 1px solid var(--line-soft); background: var(--panel);
+  }
+  .sheet-head .mark {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--cat, var(--accent)); font-size: 14px; font-weight: 700;
+  }
+  .sheet-head h2 { margin: 0; font-size: 17px; line-height: 1.25; }
+  .sheet-head p { margin: 2px 0 0; color: var(--muted); font-size: 11.5px; }
+  .sheet-head .x { margin-left: auto; }
+  .sheet-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; padding: 16px; overflow: auto; max-height: calc(100vh - 140px); }
+  .sheet-art {
+    height: 190px; border-radius: 10px; border: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, #0c1421, #09101a); color: var(--cat, var(--accent));
+    position: relative; overflow: hidden;
+  }
+  .sheet-art svg { position: absolute; inset: 8%; width: 84%; height: 84%; }
+  .kv { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 7px 12px; font-size: 12.5px; align-content: start; }
+  .kv dt { color: var(--dim); }
+  .kv dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+  .kv dd code, .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11.5px; color: #b9cce6; }
+  .sheet-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .related { margin-top: 18px; }
+  .related h3 { margin: 0 0 8px; font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .related .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rel {
+    display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+    border: 1px solid var(--line); background: var(--panel); border-radius: 7px;
+    padding: 5px 8px; color: var(--muted); font-size: 11.5px;
+  }
+  .rel:hover { color: var(--text); border-color: var(--accent); }
+  .rel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* settings pop */
+  .pop {
+    position: fixed; inset: 0; z-index: 60; display: none;
+  }
+  .pop.open { display: block; }
+  .pop .veil { position: absolute; inset: 0; background: rgba(2, 5, 9, .55); }
+  .pop .box {
+    position: absolute; right: clamp(12px, 3vw, 32px); top: 66px; width: min(380px, calc(100vw - 24px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 14px;
+  }
+  .pop h3 { margin: 0 0 4px; font-size: 14px; }
+  .pop p { margin: 0 0 10px; color: var(--muted); font-size: 11.5px; }
+  .pop label { display: block; color: var(--dim); font-size: 11px; margin: 10px 0 4px; }
+  .pop input {
+    width: 100%; height: 36px; padding: 0 10px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; outline: none;
+  }
+  .pop input:focus { border-color: var(--accent); }
+  .pop .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .pop .note { margin-top: 10px; color: var(--dim); font-size: 11px; }
+
+  footer.foot {
+    margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line-soft);
+    color: var(--dim); font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 8px 18px;
+  }
+  footer.foot code { color: var(--muted); }
+
+  @media (max-width: 940px) {
+    .layout { grid-template-columns: 1fr; }
+    .side { position: static; top: auto; }
+    .cats { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+    .cat { width: auto; flex: none; padding: 7px 10px; }
+    .cat .n { display: none; }
+    .side-card { display: none; }
+    .sheet-body { grid-template-columns: 1fr; }
+    .sheet-art { height: 160px; }
+    .brand p { display: none; }
+  }
+  @media (max-width: 620px) {
+    .top { flex-wrap: wrap; gap: 10px; }
+    .search { order: 3; flex-basis: 100%; max-width: none; }
+    .top-actions .label { display: none; }
+    .hero h2 { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="mark">PB</div>
+    <div>
+      <h1>PB Index</h1>
+      <p>Point Blank client catalog</p>
+    </div>
+  </div>
+  <div class="search">
+    <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search name, family, class, variant, path..." aria-label="Search items" />
+    <kbd>/</kbd>
+  </div>
+  <div class="top-actions">
+    <button class="btn ghost" id="random" title="Open a random item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h4l3 4M21 6h-4l-9 12H3M21 18h-4l-2-3"/></svg>
+      <span class="label">Random</span>
+    </button>
+    <button class="btn ghost" id="settings" title="Asset URL settings" aria-haspopup="dialog">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      <span class="label">Assets</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="side">
+    <p class="side-title">Catalog</p>
+    <nav class="cats" id="cats" aria-label="Categories"></nav>
+    <div class="side-card">
+      <div class="row"><span>Total items</span><b id="side-total">0</b></div>
+      <div class="row"><span>Source</span><b>asset-map</b></div>
+      <div class="row"><span>Build</span><b id="side-build">-</b></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <div>
+        <h2 id="cat-title">Weapons <span id="cat-count"></span></h2>
+        <p id="cat-desc"></p>
+      </div>
+      <div class="stamp" id="stamp"></div>
+    </section>
+
+    <section class="filters" aria-label="Filters">
+      <div class="chips" id="facets"></div>
+      <select class="field" id="family" aria-label="Filter by family"></select>
+      <select class="field" id="sort" aria-label="Sort">
+        <option value="name">Name A-Z</option>
+        <option value="name-desc">Name Z-A</option>
+        <option value="family">Family A-Z</option>
+        <option value="id">ID / key</option>
+      </select>
+      <span class="sep"></span>
+      <span class="meta"><b id="shown">0</b> shown</span>
+      <button class="btn sm ghost" id="reset">Reset</button>
+    </section>
+
+    <section class="grid" id="grid" aria-live="polite"></section>
+    <div class="sentinel" id="sentinel"></div>
+    <div class="loading" id="loading"></div>
+
+    <footer class="foot">
+      <span>Item names and artwork come from the client data at <code>shootingpoint.xyz</code>; <code>pbrecon/asset-map.json</code> is the source of truth for paths.</span>
+      <span>Refresh images: <code>node site/fetch-remote.mjs</code> + <code>node site/build-items.mjs</code></span>
+      <span id="foot-count"></span>
+    </footer>
+  </main>
+</div>
+
+<dialog class="sheet" id="detail" aria-label="Item details">
+  <div class="sheet-head">
+    <div class="mark" id="d-mark">?</div>
+    <div style="min-width:0">
+      <h2 id="d-title">-</h2>
+      <p id="d-sub">-</p>
+    </div>
+    <button class="btn sm ghost x" id="d-close" aria-label="Close">Close</button>
+  </div>
+  <div class="sheet-body">
+    <div class="sheet-art" id="d-art"></div>
+    <div>
+      <dl class="kv" id="d-kv"></dl>
+      <div class="sheet-actions">
+        <button class="btn sm" id="d-copy-path">Copy asset path</button>
+        <button class="btn sm" id="d-copy-link">Copy link</button>
+        <a class="btn sm" id="d-open" target="_blank" rel="noreferrer noopener">Open asset</a>
+      </div>
+      <div class="related" id="d-related"></div>
+    </div>
+  </div>
+</dialog>
+
+<div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="pop-title">
+  <div class="veil" data-close></div>
+  <div class="box">
+    <h3 id="pop-title">Asset host</h3>
+    <p>Used for item images and the "Open asset" link. Cards fall back to glyph art when an image cannot load.</p>
+    <label for="base">Base URL</label>
+    <input id="base" type="text" spellcheck="false" />
+    <label for="preview">Example</label>
+    <input id="preview" type="text" readonly />
+    <div class="note">Default host: <code>https://shootingpoint.xyz</code>. The catalog still browses offline; only artwork and the asset link need the host.</div>
+    <div class="actions">
+      <button class="btn sm ghost" data-close>Cancel</button>
+      <button class="btn sm primary" id="base-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="data/items.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const DATA = window.PB_INDEX;
+  const grid = document.getElementById("grid");
+  const sentinel = document.getElementById("sentinel");
+  const loading = document.getElementById("loading");
+  const qInput = document.getElementById("q");
+  const familySel = document.getElementById("family");
+  const sortSel = document.getElementById("sort");
+  const facetsEl = document.getElementById("facets");
+  const catsEl = document.getElementById("cats");
+  const detail = document.getElementById("detail");
+
+  if (!DATA || !Array.isArray(DATA.items)) {
+    grid.innerHTML = '<div class="empty"><b>Dataset not found</b>Run <code>node site/build-items.mjs</code> to generate <code>site/data/items.js</code>.</div>';
+    return;
+  }
+
+  const CATS = [
+    { id: "weapons", label: "Weapons", desc: "Weapon and equipment models shipped in the client, with variants grouped by family." },
+    { id: "cosmetics", label: "Cosmetics", desc: "Avatar parts: suits, headgear, hair, masks, gloves, and full outfit sets." },
+    { id: "maps", label: "Maps", desc: "Playable map assets, including classic and PC3123 editions." },
+    { id: "attachments", label: "Attachments", desc: "Weapon accessory models indexed by their numeric asset key." },
+  ];
+  const CAT_LABEL = Object.fromEntries(CATS.map((c) => [c.id, c.label]));
+  const CAT_COLOR = { weapons: "var(--weapons)", cosmetics: "var(--cosmetics)", maps: "var(--maps)", attachments: "var(--attachments)" };
+
+  const state = {
+    cat: "weapons",
+    q: "",
+    facet: "All",
+    family: "All",
+    sort: "name",
+    open: null,
+  };
+
+  const BATCH = 120;
+  let filtered = [];
+  let rendered = 0;
+  let io = null;
+
+  const norm = (s) => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const esc = (s) => String(s == null ? "" : s);
+
+  // Precompute the search haystack once.
+  for (const it of DATA.items) {
+    it._s = norm([
+      it.name, it.official, it.family, it.variant, it.cls, it.slot, it.cat, it.slug, it.id,
+      (it.tags || []).join(" "), (it.paths || [it.path]).join(" "), it.hash,
+    ].join(" "));
+    it._sc = it._s.replace(/ /g, "");
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* artwork                                                          */
+  /* ---------------------------------------------------------------- */
+
+  const ART = {
+    Rifle: '<path d="M10 36h28l6-8h28l4 8h30v9h-18l-5 7h-13l-4-7h-8l-6 11h-10l-2-11H10z"/><path d="M60 36h12v9H60z"/><rect x="84" y="37" width="5" height="7" rx="1"/><path d="M44 45h7v5h-7z"/>',
+    SMG: '<path d="M18 36h26l5-7h20l3 7h34v9H78l-4 7H60l-4-7h-6l-5 10H35l-2-10H18z"/><rect x="50" y="45" width="6" height="6" rx="1"/><path d="M92 37h8v4h-8z"/>',
+    Shotgun: '<path d="M8 36h40l5-7h14l3 7h58v9H88l-6 7H69l-4-7H52l-6 10H33l-2-10H8z"/><rect x="76" y="37" width="4" height="6" rx="1"/><path d="M96 36h10v8H96z"/>',
+    Sniper: '<path d="M6 37h36l5-7h16l3 7h72v8h-30l-5 7H82l-4-7H62l-6 11H43l-2-11H6z"/><rect x="52" y="24" width="38" height="6" rx="2"/><path d="M70 30v7M86 30v7M58 40h6v5h-6z"/>',
+    MG: '<path d="M8 34h34l5-8h20l4 8h34v11H86l-5 7H65l-4-7H52l-7 13H33l-2-13H8z"/><circle cx="96" cy="45" r="9"/><path d="M96 36v18M87 45h18"/><rect x="52" y="45" width="6" height="7" rx="1"/>',
+    Pistol: '<path d="M34 32h58l8 8v11h-26l-7 27H49l2-27H34z"/><rect x="52" y="32" width="7" height="8" rx="1"/><path d="M74 40h14v4H74z"/>',
+    Melee: '<path d="M20 60 92 12l10 6-58 52z"/><path d="M18 58l14 14"/><path d="M14 66l12 12 10-10-12-12z"/>',
+    Throwable: '<path d="M86 30v10M78 40h16l-4 12v22a8 8 0 0 1-8 8H74a8 8 0 0 1-8-8V52l-4-12h16z"/><path d="M72 22h16v8H72z"/><path d="M78 22c0-6 8-8 8-2"/>',
+    Launcher: '<path d="M8 38h110v12H96l-5 8H74l-4-8H60l-6 12H42l-2-12H8z"/><circle cx="104" cy="44" r="7"/><rect x="28" y="50" width="9" height="10" rx="2"/>',
+    Equipment: '<rect x="34" y="26" width="76" height="44" rx="6"/><path d="M66 34h12v12h12v12H78v12H66V58H54V46h12z"/>',
+    Other: '<path d="M22 40h50l12-10h26v14h16v10H96l-10 20H60L48 54H22z"/><circle cx="70" cy="44" r="6"/>',
+    Face: '<path d="M28 28h88v30c0 18-14 30-30 34H58c-16-4-30-16-30-34z"/><path d="M48 46h16M88 46h16"/><path d="M64 68h16"/>',
+    Head: '<path d="M34 58c0-22 14-36 40-36s40 14 40 36"/><path d="M24 58h100v10H24z"/><path d="M38 68c0 10 6 16 14 16h36c8 0 14-6 14-16"/>',
+    Headgear: '<path d="M34 54c0-22 14-38 40-38s40 16 40 38"/><path d="M28 54h96v10H28z"/><path d="M88 64h28v8H88z"/>',
+    Hair: '<path d="M32 58c0-26 16-42 38-42s38 16 38 42"/><path d="M32 58c-2 18 4 30 10 36"/><path d="M108 58c2 18-4 30-10 36"/><path d="M46 52c10-10 28-12 40-6"/>',
+    Upper: '<path d="M52 24l20 10 20-10 24 14-10 20-12-6v44H50V52l-12 6-10-20z"/>',
+    Lower: '<path d="M50 24h52l4 30-6 42H70l-2-34-2 34H44l4-42z"/>',
+    Suit: '<path d="M52 22l20 10 20-10 24 14-10 20-12-6v46H50V50l-12 6-10-20z"/><path d="M48 72h56"/>',
+    Set: '<path d="M70 18a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M70 38l-28 22 12 12 16-12 16 12 12-12z"/>',
+    Gloves: '<path d="M48 42V24a6 6 0 0 1 12 0v16h4V20a6 6 0 0 1 12 0v20h4V26a6 6 0 0 1 12 0v18h4V32a6 6 0 0 1 12 0v24c0 20-12 30-30 30S48 76 48 56z"/>',
+    Mask: '<path d="M40 34h60v26c0 18-12 28-30 32-18-4-30-14-30-32z"/><path d="M52 48h12M84 48h12"/><path d="M62 68h16"/>',
+    Back: '<path d="M52 26h36a10 10 0 0 1 10 10v46H42V36a10 10 0 0 1 10-10z"/><path d="M58 26v-8h24v8"/><path d="M42 52h56"/>',
+    Accessory: '<path d="M70 20l14 14-14 14-14-14z"/><path d="M70 48v44"/><path d="M56 84h28"/>',
+    Map: '<path d="M14 28l28-10 28 10 28-10 28 10v58l-28 10-28-10-28 10-28-10z"/><path d="M42 18v58M70 28v58M98 18v58"/><circle cx="70" cy="48" r="9"/><path d="M70 57v16"/>',
+    Attachment: '<path d="M20 58h96v14H20z"/><path d="M36 58V46h18v12M72 58V42h20v16"/><circle cx="56" cy="40" r="10"/><path d="M56 30v20M46 40h20"/>',
+  };
+
+  function artMarkup(item) {
+    const key = item.cat === "maps" ? "Map"
+      : item.cat === "attachments" ? "Attachment"
+      : item.cat === "cosmetics" ? (item.slot || "Other")
+      : (item.cls || "Other");
+    const body = ART[key] || ART.Other;
+    return `<svg viewBox="0 0 140 96" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${body}</svg>`;
+  }
+
+  function escAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /**
+   * Real client artwork when the dataset has it:
+   *  - img.u only          -> standalone PNG, shown with object-fit
+   *  - img.u + x/y/w/h     -> one cell cropped out of a sprite sheet
+   */
+  function imageMarkup(item, boxW, boxH) {
+    const im = item && item.img;
+    if (!im || !im.u) return null;
+    const url = assetUrl(im.u);
+    if (!url) return null;
+    if (!im.w || !im.h) {
+      return `<img class="shot" src="${escAttr(url)}" alt="" referrerpolicy="no-referrer" decoding="async">`;
+    }
+    const k = Math.min(boxW / im.w, boxH / im.h);
+    return `<span class="crop" style="width:${(im.w * k).toFixed(1)}px;height:${(im.h * k).toFixed(1)}px">` +
+      `<img src="${escAttr(url)}" alt="" referrerpolicy="no-referrer" decoding="async" style="left:${(-im.x * k).toFixed(1)}px;top:${(-im.y * k).toFixed(1)}px;transform:scale(${k.toFixed(4)})">` +
+      `</span>`;
+  }
+
+  function visualMarkup(item, boxW, boxH) {
+    return imageMarkup(item, boxW, boxH) || artMarkup(item);
+  }
+
+  function bindImgFallback(scope, item) {
+    if (!scope) return;
+    for (const img of scope.querySelectorAll("img")) {
+      img.addEventListener(
+        "error",
+        () => {
+          const holder = img.closest(".thumb, .sheet-art");
+          if (!holder) return;
+          holder.classList.remove("has-img");
+          holder.innerHTML = artMarkup(item);
+        },
+        { once: true },
+      );
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* state + url                                                      */
+  /* ---------------------------------------------------------------- */
+
+  function readHash() {
+    const h = location.hash.replace(/^#/, "");
+    if (!h) return;
+    const p = new URLSearchParams(h);
+    if (p.get("c") && CAT_LABEL[p.get("c")]) state.cat = p.get("c");
+    if (p.get("q")) state.q = p.get("q");
+    if (p.get("facet")) state.facet = p.get("facet");
+    if (p.get("family")) state.family = p.get("family");
+    if (p.get("sort")) state.sort = p.get("sort");
+    if (p.get("item")) state.open = p.get("item");
+  }
+
+  let writingHash = false;
+  function writeHash() {
+    const p = new URLSearchParams();
+    if (state.cat !== "weapons") p.set("c", state.cat);
+    if (state.q) p.set("q", state.q);
+    if (state.facet !== "All") p.set("facet", state.facet);
+    if (state.family !== "All") p.set("family", state.family);
+    if (state.sort !== "name") p.set("sort", state.sort);
+    if (state.open) p.set("item", state.open);
+    const next = "#" + p.toString();
+    if (location.hash === next) return;
+    writingHash = true;
+    history.replaceState(null, "", next);
+    writingHash = false;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* filtering                                                        */
+  /* ---------------------------------------------------------------- */
+
+  const isCosmetic = () => state.cat === "cosmetics";
+
+  function baseItems() {
+    return DATA.items.filter((i) => i.cat === state.cat);
+  }
+
+  function facetValues() {
+    const set = new Map();
+    for (const it of baseItems()) {
+      const v = isCosmetic() ? it.slot : state.cat === "weapons" ? it.cls : state.cat === "maps" ? "Edition" : "All";
+      if (state.cat === "maps") {
+        for (const t of it.tags) set.set(t, (set.get(t) || 0) + 1);
+      } else if (v && v !== "All") {
+        set.set(v, (set.get(v) || 0) + 1);
+      }
+    }
+    return [...set.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  function familyValues() {
+    const set = new Map();
+    for (const it of baseItems()) {
+      const f = it.family;
+      if (!f) continue;
+      set.set(f, (set.get(f) || 0) + 1);
+    }
+    return [...set.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  function getFiltered() {
+    const q = norm(state.q);
+    const terms = q ? q.split(" ").filter(Boolean) : null;
+    let arr = baseItems();
+
+    if (state.cat === "maps") {
+      if (state.facet !== "All") arr = arr.filter((i) => i.tags.includes(state.facet));
+    } else {
+      const key = isCosmetic() ? "slot" : "cls";
+      if (state.facet !== "All") arr = arr.filter((i) => i[key] === state.facet);
+    }
+    if (state.cat !== "maps" && state.family !== "All") {
+      arr = arr.filter((i) => i.family === state.family);
+    }
+    if (terms) {
+      arr = arr.filter((i) => terms.every((t) => i._s.includes(t) || i._sc.includes(t)));
+    }
+
+    const dir = state.sort === "name-desc" ? -1 : 1;
+    arr.sort((a, b) => {
+      if (state.sort === "id") return String(a.id).localeCompare(String(b.id), "en");
+      if (state.sort === "family") {
+        return String(a.family || "").localeCompare(String(b.family || ""), "en") || a.name.localeCompare(b.name, "en");
+      }
+      return dir * a.name.localeCompare(b.name, "en");
+    });
+    return arr;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* render                                                           */
+  /* ---------------------------------------------------------------- */
+
+  function catIcon(id) {
+    return `<span class="dot" style="--cat:${CAT_COLOR[id]}"></span>`;
+  }
+
+  function renderCats() {
+    catsEl.innerHTML = "";
+    for (const c of CATS) {
+      const b = document.createElement("button");
+      b.className = "cat";
+      b.type = "button";
+      b.style.setProperty("--cat", CAT_COLOR[c.id]);
+      b.setAttribute("aria-current", state.cat === c.id ? "true" : "false");
+      b.innerHTML = `${catIcon(c.id)}<span class="label"></span><span class="n"></span>`;
+      b.querySelector(".label").textContent = c.label;
+      b.querySelector(".n").textContent = (DATA.counts[c.id] || 0).toLocaleString();
+      b.addEventListener("click", () => {
+        if (state.cat === c.id) return;
+        state.cat = c.id;
+        state.facet = "All";
+        state.family = "All";
+        state.open = null;
+        sync();
+      });
+      catsEl.append(b);
+    }
+  }
+
+  function renderFacets() {
+    facetsEl.innerHTML = "";
+    const values = facetValues();
+    if (!values.length) return;
+    const all = document.createElement("button");
+    all.className = "chip";
+    all.type = "button";
+    all.style.setProperty("--cat", CAT_COLOR[state.cat]);
+    all.setAttribute("aria-pressed", state.facet === "All" ? "true" : "false");
+    all.textContent = "All";
+    all.addEventListener("click", () => { state.facet = "All"; sync(); });
+    facetsEl.append(all);
+
+    for (const [value, n] of values) {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.style.setProperty("--cat", CAT_COLOR[state.cat]);
+      b.setAttribute("aria-pressed", state.facet === value ? "true" : "false");
+      b.append(document.createTextNode(value));
+      const s = document.createElement("span");
+      s.className = "n";
+      s.textContent = n;
+      b.append(s);
+      b.addEventListener("click", () => { state.facet = value; sync(); });
+      facetsEl.append(b);
+    }
+  }
+
+  function renderFamilies() {
+    const values = familyValues();
+    familySel.innerHTML = "";
+    const all = document.createElement("option");
+    all.value = "All";
+    all.textContent = state.cat === "cosmetics" ? "All series" : "All families";
+    familySel.append(all);
+    for (const [f, n] of values) {
+      const o = document.createElement("option");
+      o.value = f;
+      o.textContent = `${f} (${n})`;
+      familySel.append(o);
+    }
+    familySel.value = values.some(([f]) => f === state.family) ? state.family : "All";
+    state.family = familySel.value;
+    familySel.disabled = state.cat === "maps";
+  }
+
+  function renderHero() {
+    const c = CATS.find((x) => x.id === state.cat);
+    document.getElementById("cat-title").firstChild.textContent = c.label + " ";
+    document.getElementById("cat-count").textContent = `(${(DATA.counts[c.id] || 0).toLocaleString()} items)`;
+    document.getElementById("cat-desc").textContent = c.desc;
+    document.getElementById("stamp").textContent = `built ${new Date(DATA.generated).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}`;
+  }
+
+  function cardEl(item) {
+    const b = document.createElement("button");
+    b.className = "card";
+    b.type = "button";
+    b.style.setProperty("--cat", CAT_COLOR[item.cat]);
+    b.dataset.id = item.id;
+    b.innerHTML = `
+      <div class="thumb${item.img ? " has-img" : ""}">${visualMarkup(item, 188, 92)}<span class="ghost"></span></div>
+      <span class="kbd-id"></span>
+      <h3></h3>
+      <p class="sub"></p>
+      <div class="tags"></div>`;
+    bindImgFallback(b, item);
+    b.querySelector(".kbd-id").textContent = item.id.split(":")[1] || "";
+    b.querySelector(".ghost").textContent = item.cat === "weapons" ? (item.cls || "") : item.cat === "cosmetics" ? (item.slot || "") : item.cat === "maps" ? (item.tags[0] || "") : "asset";
+    b.querySelector("h3").textContent = item.name;
+    const sub = item.cat === "weapons"
+      ? [item.family, item.variant].filter(Boolean).join(" · ")
+      : item.cat === "cosmetics"
+        ? [item.slot, item.variant].filter(Boolean).join(" · ")
+        : item.cat === "maps"
+          ? "Map · " + item.tags.join(" + ")
+          : "Weapon attachment";
+    b.querySelector(".sub").textContent = sub;
+
+    const tags = b.querySelector(".tags");
+    const add = (t, cls) => {
+      const s = document.createElement("span");
+      s.className = "tag" + (cls ? " " + cls : "");
+      s.textContent = t;
+      tags.append(s);
+    };
+    if (item.cat === "weapons") {
+      add(item.cls, "cls");
+      if (item.variant) for (const t of item.variant.split(" ").slice(0, 2)) add(t);
+    } else if (item.cat === "cosmetics") {
+      add(item.slot, "cls");
+      if (item.variant) add(item.variant);
+    } else if (item.cat === "maps") {
+      for (const t of item.tags) add(t, "cls");
+    } else {
+      add("Attachment", "cls");
+    }
+
+    b.addEventListener("click", () => openDetail(item.id));
+    return b;
+  }
+
+  function applyFilter() {
+    filtered = getFiltered();
+    rendered = 0;
+    grid.innerHTML = "";
+    loading.textContent = "";
+    document.getElementById("shown").textContent = filtered.length.toLocaleString();
+
+    if (!filtered.length) {
+      grid.innerHTML = '<div class="empty"><b>No items match</b>Try a shorter search, or reset the filters.</div>';
+      return;
+    }
+    renderMore();
+  }
+
+  function renderMore() {
+    if (rendered >= filtered.length) return;
+    const end = Math.min(rendered + BATCH, filtered.length);
+    const frag = document.createDocumentFragment();
+    for (let i = rendered; i < end; i++) frag.append(cardEl(filtered[i]));
+    grid.append(frag);
+    rendered = end;
+    loading.textContent = rendered < filtered.length ? `Showing ${rendered.toLocaleString()} of ${filtered.length.toLocaleString()}...` : "";
+    if (rendered >= filtered.length) {
+      if (io) io.disconnect();
+    } else if (io) {
+      io.observe(sentinel);
+    }
+  }
+
+  function sync() {
+    state.q = qInput.value;
+    sortSel.value = state.sort;
+    renderCats();
+    renderFacets();
+    renderFamilies();
+    renderHero();
+    applyFilter();
+    writeHash();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* detail                                                           */
+  /* ---------------------------------------------------------------- */
+
+  function itemById(id) {
+    return DATA.items.find((i) => i.id === id);
+  }
+
+  function storageGet(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+  function storageSet(key, value) {
+    try {
+      if (value) localStorage.setItem(key, value);
+      else localStorage.removeItem(key);
+    } catch {}
+  }
+  function storageRemove(key) {
+    try { localStorage.removeItem(key); } catch {}
+  }
+
+  function assetUrl(p) {
+    const base = storageGet("pbIndex.base") || DATA.assetBase || "";
+    if (!base) return "";
+    return base.replace(/\/+$/, "") + p;
+  }
+
+  function openDetail(id) {
+    const it = itemById(id);
+    if (!it) return;
+    state.open = id;
+    writeHash();
+
+    detail.style.setProperty("--cat", CAT_COLOR[it.cat]);
+    document.getElementById("d-mark").textContent = it.cat === "weapons" ? "W" : it.cat === "cosmetics" ? "C" : it.cat === "maps" ? "M" : "A";
+    document.getElementById("d-title").textContent = it.name;
+    document.getElementById("d-sub").textContent = `${CAT_LABEL[it.cat]} · ${it.id}`;
+    const art = document.getElementById("d-art");
+    art.classList.toggle("has-img", !!it.img);
+    art.innerHTML = visualMarkup(it, 208, 168);
+    bindImgFallback(art, it);
+
+    const kv = document.getElementById("d-kv");
+    kv.innerHTML = "";
+    const put = (k, v) => {
+      if (v == null || v === "") return;
+      const dt = document.createElement("dt");
+      dt.textContent = k;
+      const dd = document.createElement("dd");
+      if (typeof v === "string" && (v.startsWith("/assets/") || /^v[a-f0-9]{8}$/.test(v))) {
+        const c = document.createElement("code");
+        c.textContent = v;
+        dd.append(c);
+      } else {
+        dd.textContent = String(v);
+      }
+      kv.append(dt, dd);
+    };
+    if (it.cat === "weapons") put("Class", it.cls);
+    if (it.cat === "cosmetics") put("Slot", it.slot);
+    if (it.cat === "weapons" || it.cat === "cosmetics") put("Family", it.family);
+    put("Variant", it.variant);
+    if (it.cat === "maps") put("Editions", it.tags.join(", "));
+    else put("Tags", (it.tags || []).join(", "));
+    const paths = it.paths || [it.path];
+    put(paths.length > 1 ? "Asset paths" : "Asset path", paths.join("\n"));
+    put("Asset hash", it.hash);
+    put("Key", it.slug);
+    if (it.official && it.official !== it.name) put("Official name", it.official);
+
+    const open = document.getElementById("d-open");
+    const url = assetUrl(paths[0]);
+    if (url) { open.href = url; open.style.display = ""; }
+    else { open.removeAttribute("href"); open.style.display = "none"; }
+
+    const rel = document.getElementById("d-related");
+    rel.innerHTML = "";
+    const sibs = (it.cat === "weapons" || it.cat === "cosmetics")
+      ? DATA.items
+        .filter((x) => x.cat === it.cat && x.family === it.family && x.id !== it.id)
+        .slice(0, 8)
+      : [];
+    if (sibs.length) {
+      const h = document.createElement("h3");
+      h.textContent = "Same family";
+      const row = document.createElement("div");
+      row.className = "row";
+      for (const s of sibs) {
+        const b = document.createElement("button");
+        b.className = "rel";
+        b.type = "button";
+        const span = document.createElement("span");
+        span.textContent = s.name;
+        b.append(span);
+        b.addEventListener("click", () => openDetail(s.id));
+        row.append(b);
+      }
+      rel.append(h, row);
+    }
+
+    if (!detail.open) detail.showModal();
+  }
+
+  function closeDetail() {
+    if (detail.open) detail.close();
+    state.open = null;
+    writeHash();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* wire up                                                          */
+  /* ---------------------------------------------------------------- */
+
+  qInput.addEventListener("input", () => {
+    state.q = qInput.value;
+    // immediate, the dataset is small
+    if (io) io.disconnect();
+    applyFilter();
+    writeHash();
+  });
+
+  familySel.addEventListener("change", () => {
+    state.family = familySel.value;
+    if (io) io.disconnect();
+    applyFilter();
+    writeHash();
+  });
+
+  sortSel.addEventListener("change", () => {
+    state.sort = sortSel.value;
+    if (io) io.disconnect();
+    applyFilter();
+    writeHash();
+  });
+
+  document.getElementById("reset").addEventListener("click", () => {
+    state.q = "";
+    state.facet = "All";
+    state.family = "All";
+    state.sort = "name";
+    qInput.value = "";
+    sync();
+  });
+
+  document.getElementById("random").addEventListener("click", () => {
+    const pool = getFiltered();
+    if (!pool.length) return;
+    openDetail(pool[Math.floor(Math.random() * pool.length)].id);
+  });
+
+  document.getElementById("d-close").addEventListener("click", closeDetail);
+  detail.addEventListener("click", (e) => { if (e.target === detail) closeDetail(); });
+  detail.addEventListener("close", () => { state.open = null; writeHash(); });
+
+  document.getElementById("d-copy-path").addEventListener("click", async () => {
+    const it = itemById(state.open);
+    if (!it) return;
+    const text = (it.paths || [it.path]).join("\n");
+    try { await navigator.clipboard.writeText(text); } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.append(ta); ta.select();
+      document.execCommand("copy"); ta.remove();
+    }
+    const b = document.getElementById("d-copy-path");
+    const old = b.textContent;
+    b.textContent = "Copied";
+    setTimeout(() => { b.textContent = old; }, 1100);
+  });
+
+  document.getElementById("d-copy-link").addEventListener("click", async () => {
+    const url = location.href;
+    try { await navigator.clipboard.writeText(url); } catch {}
+    const b = document.getElementById("d-copy-link");
+    const old = b.textContent;
+    b.textContent = "Copied";
+    setTimeout(() => { b.textContent = old; }, 1100);
+  });
+
+  // settings
+  const pop = document.getElementById("pop");
+  const baseInput = document.getElementById("base");
+  const previewInput = document.getElementById("preview");
+  const samplePath = (DATA.items.find((i) => i.hash) || {}).path || "/assets/weapons/models/c4.glb";
+
+  function updatePreview() {
+    const base = baseInput.value.trim().replace(/\/+$/, "");
+    previewInput.value = base ? base + samplePath : samplePath;
+  }
+  document.getElementById("settings").addEventListener("click", () => {
+    baseInput.value = storageGet("pbIndex.base") || DATA.assetBase || "";
+    updatePreview();
+    pop.classList.add("open");
+  });
+  pop.addEventListener("click", (e) => { if (e.target.hasAttribute("data-close")) pop.classList.remove("open"); });
+  baseInput.addEventListener("input", updatePreview);
+  document.getElementById("base-save").addEventListener("click", () => {
+    const v = baseInput.value.trim().replace(/\/+$/, "");
+    if (v) storageSet("pbIndex.base", v);
+    else storageRemove("pbIndex.base");
+    pop.classList.remove("open");
+    // re-resolve every image URL against the new host
+    applyFilter();
+    if (state.open) openDetail(state.open);
+  });
+
+  // keyboard
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== qInput && !detail.open) {
+      e.preventDefault(); qInput.focus(); qInput.select();
+    }
+    if (e.key === "Escape" && document.activeElement === qInput) {
+      qInput.value = ""; state.q = ""; applyFilter(); writeHash();
+    }
+  });
+
+  window.addEventListener("hashchange", () => {
+    if (writingHash) return;
+    readHash();
+    qInput.value = state.q;
+    sortSel.value = state.sort;
+    sync();
+    if (state.open) openDetail(state.open);
+  });
+
+  // init
+  readHash();
+  qInput.value = state.q;
+  sortSel.value = state.sort;
+  document.getElementById("side-total").textContent = DATA.total.toLocaleString();
+  document.getElementById("side-build").textContent = new Date(DATA.generated).toISOString().slice(0, 10);
+  document.getElementById("foot-count").textContent = `${DATA.total.toLocaleString()} assets · ${Object.entries(DATA.counts).map(([k, v]) => `${CAT_LABEL[k] || k} ${v}`).join(" · ")}`;
+
+  if ("IntersectionObserver" in window) {
+    io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) renderMore();
+    }, { rootMargin: "900px 0px" });
+  }
+
+  renderCats();
+  renderFacets();
+  renderFamilies();
+  renderHero();
+  applyFilter();
+
+  if (state.open) openDetail(state.open);
+})();
+</script>
+</body>
+</html>
