@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.65 · `manifest.json` 2.8.30
+- `esp.js` v1.66 · `manifest.json` 2.8.31
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -27,7 +27,6 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 | AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค |
 | ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
-| SPAWN | เสกปืนจากร้าน/พรีเมียม/ทั้งคลังแสง (ไม่ใช้ proxy) |
 | SAFETY | master switch, คีย์ลัด, bridge, Anti-Cheat, panic |
 
 > - ชิป **ESP ON/OFF** ที่หัวแผง = เปิด/ปิด master (F8)
@@ -55,29 +54,24 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 - **เผื่อสิ่งกีดขวาง** (0–0.35 m) = ยิงจุดรอบเป้าเพิ่มเมื่อ ray หลักชนขอบ/ราว
   ทำให้ล็อคผ่านช่องเล็ก ๆ ได้โดยไม่ทะลุกำแพงหนา
 
-## SPAWN — เสกปืน
+## SPAWN — ปิดใช้งานแล้ว (v1.66)
 
-แท็บ **SPAWN** เลือกแหล่งได้:
+แท็บ SPAWN ถูกถอดออกหลังทดสอบกับ server จริง สรุปผล:
 
-- `ร้านค้า` = 159 ID ที่วางขาย
-- `พรีเมียม` = อาวุธในกล่อง/ขายตรง (Barrett, Jackhammer, Zombie Slayer, GSL2016)
-- `ในกระเป๋า` = respawn inventory ของบัญชี
-- `ทั้งคลังแสง` = ทุก ID ที่ใช้งานได้
+| วิธี | ผล |
+|---|---|
+| ตั้ง respawn loadout เป็นปืนที่ไม่ได้อยู่ในบัญชี | ❌ server ดีดกลับเป็นปืนเดิม |
+| ส่ง `sendHit` ด้วย ID ปืนที่เสก | ❌ server ทิ้ง hit (ยิงไม่เข้า) |
+| `sendPickup` ปลอม (ช่องว่าง/ไม่ว่าง) | ❌ server ไม่ broadcast กลับ |
+| `sendDrop` + `sendPickup` ปลอม | ❌ server ไม่รับทั้งคู่ |
+| หยิบปืนจริงจากพื้น (คนอื่นตาย) | ✅ ได้ดาเมจจริง |
+| proxy เป็นปืนที่ server ack (ใช้เฉพาะปืนในบัญชี) | ✅ ดาเมจเข้า |
 
-คลิกชื่อ → `ws.equip()` + คงปืนไว้ในช่อง
-- **owned (server ack ตรงกับช่อง)**: ส่ง ID จริง ไม่ใช้ proxy
-- **นอก loadout ที่ server ack + proxy เปิด**: คงปืนที่เห็น แต่ส่ง ID/ชื่อ/ดาเมจของปืนที่ server ack ไว้ (state, fire, reload, hit ตรงกันหมด) → ดาเมจเข้า
-- **นอก loadout + proxy ปิด**: ส่ง ID ที่เสกตรง ๆ (server จะทิ้ง hit — ยิงไม่เข้า)
+สาเหตุ: server ไม่ยอมให้ client ประกาศเองว่าถือปืนอะไร — มันรู้จาก respawn loadout
+ที่ allocate ให้ตามบัญชี และของตกที่เกิดจากผู้เล่นตายเท่านั้น
 
-> server ปฏิเสธการตั้ง respawn loadout เป็นปืนที่ไม่ได้อยู่ในบัญชี (ทดสอบแล้ว ack ดีดกลับ)
-> ทางที่ได้ดาเมจจริงของปืนนั้นคือ "หยิบจากพื้น" เท่านั้น
-
-ความปลอดภัย:
-- proxy เฉพาะปืนนอกกระเป๋า (owned ไม่ใช้)
-- hit packet ถูกสเกลตามดาเมจปืนที่ server รับรอง ไม่ยัดดาเมจเกินจริงของปืนนั้น
-- hook เฉพาะ instance (`adoptServerLoadout`, `ws.refill`, `net.sendState/sendFire/sendReload/sendHit`) ไม่แตะ prototype/native
-- cooldown 1.2 วิ และจำกัด 6 ครั้ง/นาที
-- ไม่ปลอม event/เวลา/ค่า hp-speed
+ปืนที่เสกด้วย client จึงไม่มีทางถูกนับเป็นเจ้าของจากฝั่งเรา ถ้าต้องการปืนนอกบัญชี
+ต้องหยิบจากพื้นเท่านั้น
 
 ## FPS unlock
 

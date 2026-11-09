@@ -69,10 +69,8 @@
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
-    spawnCooldownMs: 1200,
-    spawnProxy: true,
   };
-  const VERSION = "v1.65";
+  const VERSION = "v1.66";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -247,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.65</span>
+      <span id="pbTitle">PB ESP v1.66</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -258,7 +256,6 @@
       <button data-tab="aim">AIM</button>
       <button data-tab="esp">ESP</button>
       <button data-tab="weapon">WEAPON</button>
-      <button data-tab="spawn">SPAWN</button>
       <button data-tab="safety">SAFETY</button>
     </div>
     <div id="pbBody">
@@ -432,34 +429,6 @@
         </div>
       </div>
 
-      <div class="pbPane" data-pane="spawn" style="display:none">
-        <div class="pbSec">เสกปืน (ไม่ใช้ proxy)</div>
-        <div class="pbRow">
-          <input id="pbSpawnSearch" type="text" placeholder="ค้นหาชื่อ / ID" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="pbRow">
-          <select id="pbSpawnSource">
-            <option value="shop">ร้านค้า</option>
-            <option value="premium">พรีเมียม</option>
-            <option value="owned">ในกระเป๋า</option>
-            <option value="all">ทั้งคลังแสง</option>
-          </select>
-          <select id="pbSpawnSlot">
-            <option value="-1">ทุกช่อง</option>
-            <option value="0">Primary</option>
-            <option value="1">Secondary</option>
-            <option value="2">Melee</option>
-            <option value="3">Grenade</option>
-            <option value="4">Special</option>
-          </select>
-        </div>
-        <div class="pbHelp">คลิกชื่อเพื่อใส่กระบอกนั้น · proxy เฉพาะปืนนอกกระเป๋า · มี rate limit กันพฤติกรรมผิดปกติ</div>
-        <label><input type="checkbox" data-c="spawnProxy"> ใช้ proxy เมื่อปืนไม่อยู่ในกระเป๋า (ดาเมจชัวร์)</label>
-        <div class="pbHelp">ปืนนอก inventory: ถ้าไม่ใช้ proxy server อาจไม่คิดดาเมจ · proxy จะคิดตามปืนที่ server รู้จัก</div>
-        <div id="pbSpawnList"><div class="pbSpawnEmpty">กำลังรอฐานอาวุธ…</div></div>
-        <div class="pbHelp" id="pbSpawnInfo">—</div>
-      </div>
-
       <div class="pbPane" data-pane="esp" style="display:none">
         <div class="pbSec">ออฟเลย์</div>
         <label><input type="checkbox" data-c="box"> กรอบตัว</label>
@@ -568,20 +537,6 @@
       background:#120b0e;color:#ff4d5a;font:700 11px 'Segoe UI';border:1px solid #3a2227;
       border-radius:0;letter-spacing:1px;}
     #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a}
-    #pbEspPanel #pbSpawnList{max-height:220px;overflow:auto;background:#100a0c;
-      border-bottom:1px solid #3a2227;}
-    #pbEspPanel #pbSpawnList::-webkit-scrollbar{width:7px;}
-    #pbEspPanel #pbSpawnList::-webkit-scrollbar-thumb{background:#45262c;}
-    #pbEspPanel .pbSpawnRow{display:flex;width:100%;gap:6px;align-items:center;padding:4px 10px;
-      background:transparent;border:0;border-bottom:1px solid rgba(255,255,255,.04);
-      color:#e7ced2;text-transform:none;letter-spacing:0;text-align:left;
-      font:600 10px 'Segoe UI';cursor:pointer;}
-    #pbEspPanel .pbSpawnRow:hover{background:rgba(255,77,90,.09);color:#fff;}
-    #pbEspPanel .pbSpawnRow .cl{flex:0 0 28px;color:#ff4d5a;font:700 8px 'Segoe UI';}
-    #pbEspPanel .pbSpawnRow .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    #pbEspPanel .pbSpawnRow .id{flex:0 0 auto;color:#a37f86;font:9px Consolas,monospace;}
-    #pbEspPanel .pbSpawnRow.ok .nm{color:#ffd27a;}
-    #pbEspPanel .pbSpawnEmpty{padding:8px 10px;color:#a37f86;font-size:9px;line-height:1.5;}
     #pbEspPanel label:hover{background:rgba(255,77,90,.06)}
     #pbEspPanel button:disabled,#pbEspPanel input:disabled,#pbEspPanel select:disabled{opacity:.35;cursor:not-allowed;}
     #pbEspPanel #pbAimPresets button{padding:3px 4px;font-size:8.5px;letter-spacing:.2px;}
@@ -608,7 +563,6 @@
     currentTab = name;
     bodyEl.scrollTop = scrollByTab.get(name) || 0;
     saveUi({ tab: name });
-    if (name === "spawn") setTimeout(() => { try { renderSpawnList(); } catch (_) { } }, 0);
   };
   tabBar.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-tab]");
@@ -3385,12 +3339,6 @@
     return ids;
   }
 
-  function ackOwns(pb, slot, id) {
-    const key = SPAWN_KEYS[slot];
-    const ack = pb && pb.net && pb.net.localLoadout;
-    return !!(key && ack && Number(ack[key]) === Number(id));
-  }
-
   function serverOwnedIds(pb) {
     const ids = [];
     const seen = new Set();
@@ -3427,349 +3375,6 @@
      (net.weaponsFlag) and the acknowledged loadout (net.localLoadout).
      allowedId(slotKey, id) is the client-side check the respawn UI itself
      uses, so it is the closest answer to "will the server accept this?" */
-  /* ───── spawn (shop / premium / arsenal) — no proxy, no pickup ─────
-     The host computes damage from the weaponId we send in the state packet.
-     Keep the spawned weapon equipped through adoptServerLoadout()/refill() and
-     the real stats are used. Only instance methods are wrapped (no prototypes,
-     no native functions), and spawns are rate-limited. */
-  const SHOP_SPAWN_IDS = [407002,407001,407014,407013,407004,407012,315003,315001,301004,301017,301052,301379,301014,301001,301002,301007,103015,103059,103002,103115,103670,103036,103763,103406,103005,103049,103050,103051,103090,103143,103067,103013,103284,103823,103827,103004,103236,103794,103223,103042,103043,103060,103003,103549,103338,103268,103269,103859,103153,103764,103778,103069,103094,103095,103066,103001,103306,103053,103514,103123,103890,103174,118006,118005,118004,110017,110032,110004,110040,110003,110011,106001,106020,106319,106005,106037,106246,106010,106043,106260,106272,106003,106018,106039,104033,104434,136141,104006,104013,104139,104897,136137,104054,104652,104034,104035,104738,104001,104056,104107,104352,104134,104011,104138,104010,104106,104057,104002,104513,136139,104008,105157,105375,105588,105030,105083,105001,105561,105322,105005,105018,105019,105020,105644,105706,105145,105002,105021,105022,105003,105035,105123,105029,105072,105031,105068,214002,214001,214017,202007,202049,202001,202011,202003,202024,202102,202013,202014,202015,202016,202112,202094,527001,527003,528001,508004,508002,508001,508003];
-  const PREMIUM_SPAWN_IDS = [103258,202084,105153,301131,104263,105154,105032,106019,106042];
-
-  const spawnSearch = panel.querySelector("#pbSpawnSearch");
-  const spawnSource = panel.querySelector("#pbSpawnSource");
-  const spawnSlotSel = panel.querySelector("#pbSpawnSlot");
-  const spawnListEl = panel.querySelector("#pbSpawnList");
-  const spawnInfoEl = panel.querySelector("#pbSpawnInfo");
-  const SPAWN_TAG = ["PRI", "SEC", "MEL", "GRN", "SPC"];
-  const spawnKeep = new Map();
-  const spawnProxy = new Map(); // slot -> { spawnedId, proxyId } for non-owned weapons
-  let spawnKeepPb = null;
-  let spawnKeepWs = null;
-  let lastSpawnAt = -1e9;
-  let spawnLog = [];
-  let spawnRenderAt = 0;
-
-  function loadoutIds(ws) {    const ids = [0, 0, 0, 0, 0];
-    try {
-      const held = typeof ws.getHudState === "function" ? ws.getHudState().slots : null;
-      if (Array.isArray(held)) {
-        for (const h of held) {
-          if (h && h.slot >= 0 && h.slot < 5 && h.id) ids[h.slot] = h.id;
-        }
-      }
-    } catch (_) { }
-    if (!ids.some(Boolean) && Array.isArray(ws.owned)) {
-      for (let i = 0; i < 5; i++) ids[i] = Number(ws.owned[i]) || 0;
-    }
-    return ids;
-  }
-
-  function syncRespawnLoadout(pb, ws) {
-    const ids = loadoutIds(ws);
-    const sel = pb && pb.respawnMenu && pb.respawnMenu.sel;
-    if (sel) {
-      for (const eq of [sel.equipped, sel.pending]) {
-        if (!eq) continue;
-        for (let i = 0; i < 5; i++) eq[SPAWN_KEYS[i]] = ids[i] || 0;
-      }
-      try { if (typeof sel.restore === "function") sel.restore(sel.pending ?? sel.equipped); } catch (_) { }
-    }
-    const net = pb && pb.net;
-    if (net && typeof net.setRespawnWeapons === "function") {
-      try { net.setRespawnWeapons(ids.map((itemId) => ({ itemId: itemId || 0, objectId: 0 }))); } catch (_) { }
-    }
-    return ids;
-  }
-
-  function reapplyKept(pb) {
-    if (!pb || !pb.me || !pb.me.alive || !spawnKeep.size) return;
-    const ws = weaponSystemOf(pb);
-    if (!ws || !Array.isArray(ws.slots)) return;
-    for (const [slot, id] of spawnKeep) {
-      if (slot < 0 || slot > 4) continue;
-      const cur = ws.slots[slot] && ws.slots[slot].def && Number(ws.slots[slot].def.id);
-      if (Number(cur) === Number(id)) continue;
-      try {
-        if (typeof ws.equip === "function" && ws.equip(id)) {
-          if (Array.isArray(ws.owned)) ws.owned[slot] = id;
-        }
-      } catch (_) { }
-    }
-  }
-
-  function ensureSpawnKeepHooks(pb) {
-    if (!pb) return;
-    if (spawnKeepPb !== pb) {
-      spawnKeepPb = pb;
-      spawnKeep.clear();
-      spawnKeepWs = null;
-      if (typeof pb.adoptServerLoadout === "function" && !pb.__pbSpawnKeepAdopt) {
-        try { Object.defineProperty(pb, "__pbSpawnKeepAdopt", { value: 1, enumerable: false }); }
-        catch (_) { try { pb.__pbSpawnKeepAdopt = 1; } catch (_) { } }
-        const orig = pb.adoptServerLoadout;
-        pb.adoptServerLoadout = function (...args) {
-          const res = orig.apply(this, args);
-          try {
-            reapplyKept(this);
-            const ws2 = weaponSystemOf(this);
-            if (ws2 && CFG.spawnProxy) {
-              for (const [slot, id] of spawnKeep) {
-                if (ackOwns(this, slot, id)) { spawnProxy.delete(slot); continue; }
-                const pid = legalProxyId(this, ws2, slot, id);
-                if (pid) spawnProxy.set(slot, { spawnedId: Number(id), proxyId: pid });
-              }
-            }
-          } catch (_) { }
-          return res;
-        };
-      }
-    }
-    const ws = weaponSystemOf(pb);
-    if (ws && spawnKeepWs !== ws && typeof ws.refill === "function" && !ws.__pbSpawnKeepRefill) {
-      spawnKeepWs = ws;
-      try { Object.defineProperty(ws, "__pbSpawnKeepRefill", { value: 1, enumerable: false }); }
-      catch (_) { try { ws.__pbSpawnKeepRefill = 1; } catch (_) { } }
-      const orig = ws.refill;
-      ws.refill = function (...args) {
-        const res = orig.apply(this, args);
-        setTimeout(() => { try { reapplyKept(findPB()); } catch (_) { } }, 250);
-        return res;
-      };
-    }
-  }
-
-  function legalProxyId(pb, ws, slot, spawnedId) {
-    const key = SPAWN_KEYS[slot];
-    if (!key) return 0;
-    const ack = pb && pb.net && pb.net.localLoadout;
-    let id = ack ? Number(ack[key]) || 0 : 0;
-    if (!id) {
-      try {
-        const d = ws && ws.db && ws.db.defaultLoadout;
-        id = d ? Number(d[key]) || 0 : 0;
-      } catch (_) { }
-    }
-    if (!id || id === Number(spawnedId)) return 0;
-    return id;
-  }
-
-  function proxyWeaponId(id) {
-    if (!CFG.spawnProxy || !id) return id;
-    const pb = findPB();
-    const ws = weaponSystemOf(pb);
-    if (!ws || !Array.isArray(ws.slots)) return id;
-    let slot = -1;
-    for (let i = 0; i < ws.slots.length && i < 5; i++) {
-      const d = ws.slots[i] && ws.slots[i].def;
-      if (d && Number(d.id) === Number(id)) { slot = i; break; }
-    }
-    if (slot < 0) return id;
-    const rec = spawnProxy.get(slot);
-    if (!rec || rec.spawnedId !== Number(id)) return id;
-    const ack = pb.net && pb.net.localLoadout;
-    const key = SPAWN_KEYS[slot];
-    if (ack && key && Number(ack[key]) === Number(id)) {
-      spawnProxy.delete(slot); // server accepted this loadout
-      return id;
-    }
-    return rec.proxyId || id;
-  }
-
-  function proxyHit(payload) {
-    if (!CFG.spawnProxy || !payload || !spawnProxy.size) return;
-    const pb = findPB();
-    const ws = weaponSystemOf(pb);
-    if (!ws || !Array.isArray(ws.slots)) return;
-    const db = ws.db;
-    for (const [slot, rec] of spawnProxy) {
-      const cur = ws.slots[slot] && ws.slots[slot].def;
-      if (!cur || Number(cur.id) !== rec.spawnedId) continue;
-      const nm = payload.weapon;
-      if (nm && cur.name && nm !== cur.name) {
-        let sdef = null;
-        try { sdef = db && typeof db.def === "function" ? db.def(rec.spawnedId) : null; } catch (_) { }
-        if (!sdef || sdef.name !== nm) continue;
-      }
-      const pd = (() => { try { return db && typeof db.def === "function" ? db.def(rec.proxyId) : null; } catch (_) { return null; } })();
-      if (!pd) continue;
-      if (pd.name) payload.weapon = pd.name;
-      const dmg = Number(pd.damage) || Number(pd.pb && pd.pb.damage) || 0;
-      const curDmg = Number(cur.damage) || Number(cur.pb && cur.pb.damage) || 0;
-      const base = Number(payload.baseDamage) || 0;
-      if (payload.preScaled) {
-        if (base > 0 && dmg > 0 && curDmg > 0) payload.baseDamage = Math.max(1, Math.round((base * dmg) / curDmg));
-        else if (base <= 0 && dmg > 0) payload.baseDamage = dmg;
-      } else if (dmg > 0) {
-        payload.baseDamage = dmg;
-      }
-      return;
-    }
-  }
-
-  function ensureSpawnProxyHooks(pb) {
-    if (!pb || !pb.net || pb.net.__pbSpawnProxyHook) return;
-    const net = pb.net;
-    try { Object.defineProperty(net, "__pbSpawnProxyHook", { value: 1, enumerable: false }); }
-    catch (_) { try { net.__pbSpawnProxyHook = 1; } catch (_) { } }
-
-    const fire = net.sendFire;
-    if (typeof fire === "function") {
-      net.sendFire = function (id, ...rest) {
-        let v = id;
-        try { v = proxyWeaponId(id); } catch (_) { }
-        return fire.call(this, v, ...rest);
-      };
-    }
-    const state = net.sendState;
-    if (typeof state === "function") {
-      net.sendState = function (payload, ...rest) {
-        try {
-          if (CFG.spawnProxy && payload && payload.weaponId) {
-            const pid = proxyWeaponId(payload.weaponId);
-            if (pid !== payload.weaponId) {
-              payload.weaponId = pid;
-              const def = weaponSystemOf(pb)?.db?.def?.(pid);
-              if (def && def.name) payload.weapon = def.name;
-            }
-          }
-        } catch (_) { }
-        return state.call(this, payload, ...rest);
-      };
-    }
-    const reload = net.sendReload;
-    if (typeof reload === "function") {
-      net.sendReload = function (id, ...rest) {
-        let v = id;
-        try { v = proxyWeaponId(id); } catch (_) { }
-        return reload.call(this, v, ...rest);
-      };
-    }
-    const hit = net.sendHit;
-    if (typeof hit === "function") {
-      net.sendHit = function (payload, ...rest) {
-        try { proxyHit(payload); } catch (_) { }
-        return hit.call(this, payload, ...rest);
-      };
-    }
-  }
-
-  function spawnCatalog(pb) {
-    const ws = weaponSystemOf(pb);
-    const db = ws && ws.db;
-    if (!db || !db.loaded || typeof db.all !== "function") return [];
-    const source = spawnSource ? spawnSource.value : "shop";
-    const shop = new Set(SHOP_SPAWN_IDS);
-    const prem = new Set(PREMIUM_SPAWN_IDS);
-    const ownedSet = new Set(serverOwnedIds(pb));
-    const out = [];
-    for (const st of db.all()) {
-      const id = Number(st && st.id);
-      if (!id || !usableStat(st)) continue;
-      if (source === "shop" && !shop.has(id)) continue;
-      if (source === "premium" && !prem.has(id)) continue;
-      if (source === "owned" && !ownedSet.has(id)) continue;
-      out.push({
-        id,
-        name: st.name || ("#" + id),
-        slot: Math.min(5, Math.max(1, Number(st.slot) || 1)) - 1,
-        dmg: Number(st.damage) || Number(st.pb && st.pb.damage) || 0,
-        owned: ownedSet.has(id),
-      });
-    }
-    out.sort((a, b) => Number(b.owned) - Number(a.owned) || a.slot - b.slot || a.name.localeCompare(b.name, "en"));
-    return out;
-  }
-
-  function renderSpawnList() {
-    if (!spawnListEl) return;
-    const pb = findPB();
-    const all = spawnCatalog(pb);
-    const slotWant = spawnSlotSel ? Number(spawnSlotSel.value) : -1;
-    const q = String(spawnSearch && spawnSearch.value || "").trim().toLowerCase();
-    let list = all;
-    if (slotWant >= 0) list = list.filter((x) => x.slot === slotWant);
-    if (q) list = list.filter((x) => x.name.toLowerCase().includes(q) || String(x.id).includes(q));
-    const MAX = 200;
-    const shown = list.slice(0, MAX);
-
-    if (!shown.length) {
-      spawnListEl.innerHTML = '<div class="pbSpawnEmpty">ไม่พบอาวุธ — เข้าแมตช์ก่อนหรือเปลี่ยนหมวด</div>';
-      if (spawnInfoEl) spawnInfoEl.textContent = "—";
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    for (const it of shown) {
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = "pbSpawnRow" + (it.owned ? " ok" : "");
-      row.title = `${it.name} · ${it.id}`;
-      const cl = document.createElement("span");
-      cl.className = "cl";
-      cl.textContent = SPAWN_TAG[it.slot] || "?";
-      const nm = document.createElement("span");
-      nm.className = "nm";
-      nm.textContent = (it.owned ? "✓ " : "") + it.name;
-      const id = document.createElement("span");
-      id.className = "id";
-      id.textContent = String(it.id);
-      row.append(cl, nm, id);
-      row.addEventListener("click", () => spawnWeapon(it.id));
-      frag.append(row);
-    }
-    spawnListEl.replaceChildren(frag);
-    if (spawnInfoEl) {
-      spawnInfoEl.textContent = `${shown.length}/${list.length} กระบอก` + (all.length > MAX ? " · พิมพ์เพื่อกรอง" : "");
-    }
-  }
-
-  function spawnWeapon(rawId) {
-    const id = Math.trunc(Number(rawId));
-    if (!id) return false;
-    const pb = findPB();
-    const ws = weaponSystemOf(pb);
-    if (!ws || !ws.db || !ws.db.loaded) { statusHold("เสก: ยังไม่เข้าแมตช์/ฐานอาวุธยังโหลด"); return false; }
-    const def = typeof ws.db.def === "function" ? ws.db.def(id) : null;
-    if (!def) { statusHold("เสก: ไม่พบอาวุธ ID " + id); return false; }
-    const now = performance.now();
-    const cd = Math.max(600, Number(CFG.spawnCooldownMs) || 1200);
-    if (now - lastSpawnAt < cd) {
-      statusHold(`เสก: รออีก ${(Math.ceil((cd - (now - lastSpawnAt)) / 100) / 10).toFixed(1)}s`);
-      return false;
-    }
-    spawnLog = spawnLog.filter((t) => now - t < 60000);
-    if (spawnLog.length >= 6) { statusHold("เสก: ครบ 6 ครั้ง/นาทีแล้ว"); return false; }
-    lastSpawnAt = now;
-    spawnLog.push(now);
-
-    ensureSpawnKeepHooks(pb);
-    const slot = Math.min(5, Math.max(1, Number(def.slot) || 1)) - 1;
-    const owned = ackOwns(pb, slot, id);
-    spawnKeep.set(slot, id);
-    try { if (typeof ws.equip === "function") ws.equip(id); } catch (_) { }
-    if (Array.isArray(ws.owned)) ws.owned[slot] = id;
-
-    if (owned === true) {
-      spawnProxy.delete(slot);
-      syncRespawnLoadout(pb, ws);
-      statusHold(`เสก ${def.name || id} — owned · เกิดใหม่ 1 ครั้งให้ server รับ`, 3000);
-    } else if (CFG.spawnProxy) {
-      ensureSpawnProxyHooks(pb);
-      const pid = legalProxyId(pb, ws, slot, id);
-      if (pid) spawnProxy.set(slot, { spawnedId: Number(id), proxyId: pid });
-      else spawnProxy.delete(slot);
-      statusHold(`เสก ${def.name || id} — นอก inventory · proxy ${pid || "?"}`, 3200);
-    } else {
-      spawnProxy.delete(slot);
-      statusHold(`เสก ${def.name || id} — นอก inventory · ไม่ใช้ proxy (อาจไม่คิดดาเมจ)`, 3200);
-    }
-    return true;
-  }
-
-  if (spawnSearch) spawnSearch.addEventListener("input", renderSpawnList);
-  if (spawnSource) spawnSource.addEventListener("change", renderSpawnList);
-  if (spawnSlotSel) spawnSlotSel.addEventListener("change", renderSpawnList);
-  renderSpawnList();
-
   const openSiteBtn = panel.querySelector("#pbOpenSite");
   if (openSiteBtn) {
     openSiteBtn.addEventListener("click", () => {
@@ -3843,12 +3448,6 @@
     updateAcChip();
     updateMasterChip();
     updateFeatureLine();
-    ensureSpawnKeepHooks(pbNow);
-    const spawnPane = panel.querySelector('.pbPane[data-pane="spawn"]');
-    if (spawnPane && spawnPane.style.display !== "none" && performance.now() - spawnRenderAt > 2500) {
-      spawnRenderAt = performance.now();
-      renderSpawnList();
-    }
     const bridgeEl = panel.querySelector("#pbBridgeInfo");
     if (bridgeEl) {
       const r = findRenderer();
