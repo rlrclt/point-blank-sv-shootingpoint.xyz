@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.63 · `manifest.json` 2.8.28
+- `esp.js` v1.64 · `manifest.json` 2.8.29
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -55,7 +55,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 - **เผื่อสิ่งกีดขวาง** (0–0.35 m) = ยิงจุดรอบเป้าเพิ่มเมื่อ ray หลักชนขอบ/ราว
   ทำให้ล็อคผ่านช่องเล็ก ๆ ได้โดยไม่ทะลุกำแพงหนา
 
-## SPAWN — เสกปืน (ไม่ใช้ proxy)
+## SPAWN — เสกปืน
 
 แท็บ **SPAWN** เลือกแหล่งได้:
 
@@ -66,11 +66,12 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 
 คลิกชื่อ → `ws.equip()` + คงปืนไว้ในช่อง
 - **owned**: sync respawn loadout → เกิดใหม่ 1 ครั้ง server รับ
-- **นอก inventory**: คง equip ไว้ ไม่ sync respawn (host ยังคิดดาเมจจาก weaponId)
+- **นอก inventory + proxy เปิด**: คงปืนที่เห็น แต่ส่ง ID/ชื่อ/ดาเมจของปืนที่ server รู้จัก (state, fire, reload, hit ตรงกันหมด) → ดาเมจชัวร์
+- **นอก inventory + proxy ปิด**: ส่ง ID ที่เสกตรง ๆ (server อาจไม่คิดดาเมจ)
 
 ความปลอดภัย:
-- ไม่ใช้ proxy / pickup / fake fire id
-- hook เฉพาะ instance (`adoptServerLoadout`, `ws.refill`) ไม่แตะ prototype/native
+- proxy เฉพาะปืนนอกกระเป๋า (owned ไม่ใช้)
+- hook เฉพาะ instance (`adoptServerLoadout`, `ws.refill`, `net.sendState/sendFire/sendReload/sendHit`) ไม่แตะ prototype/native
 - cooldown 1.2 วิ และจำกัด 6 ครั้ง/นาที
 - ไม่ปลอม event/เวลา/ค่า hp-speed
 

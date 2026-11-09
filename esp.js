@@ -70,8 +70,9 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
     spawnCooldownMs: 1200,
+    spawnProxy: true,
   };
-  const VERSION = "v1.63";
+  const VERSION = "v1.64";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -246,7 +247,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.63</span>
+      <span id="pbTitle">PB ESP v1.64</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -452,7 +453,9 @@
             <option value="4">Special</option>
           </select>
         </div>
-        <div class="pbHelp">คลิกชื่อเพื่อใส่กระบอกนั้น · ไม่มี proxy/pickup · มี rate limit กันพฤติกรรมผิดปกติ</div>
+        <div class="pbHelp">คลิกชื่อเพื่อใส่กระบอกนั้น · proxy เฉพาะปืนนอกกระเป๋า · มี rate limit กันพฤติกรรมผิดปกติ</div>
+        <label><input type="checkbox" data-c="spawnProxy"> ใช้ proxy เมื่อปืนไม่อยู่ในกระเป๋า (ดาเมจชัวร์)</label>
+        <div class="pbHelp">ปืนนอก inventory: ถ้าไม่ใช้ proxy server อาจไม่คิดดาเมจ · proxy จะคิดตามปืนที่ server รู้จัก</div>
         <div id="pbSpawnList"><div class="pbSpawnEmpty">กำลังรอฐานอาวุธ…</div></div>
         <div class="pbHelp" id="pbSpawnInfo">—</div>
       </div>
@@ -3440,14 +3443,14 @@
   const spawnInfoEl = panel.querySelector("#pbSpawnInfo");
   const SPAWN_TAG = ["PRI", "SEC", "MEL", "GRN", "SPC"];
   const spawnKeep = new Map();
+  const spawnProxy = new Map(); // slot -> { spawnedId, proxyId } for non-owned weapons
   let spawnKeepPb = null;
   let spawnKeepWs = null;
   let lastSpawnAt = -1e9;
   let spawnLog = [];
   let spawnRenderAt = 0;
 
-  function loadoutIds(ws) {
-    const ids = [0, 0, 0, 0, 0];
+  function loadoutIds(ws) {    const ids = [0, 0, 0, 0, 0];
     try {
       const held = typeof ws.getHudState === "function" ? ws.getHudState().slots : null;
       if (Array.isArray(held)) {
@@ -3507,7 +3510,17 @@
         const orig = pb.adoptServerLoadout;
         pb.adoptServerLoadout = function (...args) {
           const res = orig.apply(this, args);
-          try { reapplyKept(this); } catch (_) { }
+          try {
+            reapplyKept(this);
+            const ws2 = weaponSystemOf(this);
+            if (ws2 && CFG.spawnProxy) {
+              for (const [slot, id] of spawnKeep) {
+                if (serverOwns(this, id) === true) { spawnProxy.delete(slot); continue; }
+                const pid = legalProxyId(this, ws2, slot, id);
+                if (pid) spawnProxy.set(slot, { spawnedId: Number(id), proxyId: pid });
+              }
+            }
+          } catch (_) { }
           return res;
         };
       }
@@ -3522,6 +3535,115 @@
         const res = orig.apply(this, args);
         setTimeout(() => { try { reapplyKept(findPB()); } catch (_) { } }, 250);
         return res;
+      };
+    }
+  }
+
+  function legalProxyId(pb, ws, slot, spawnedId) {
+    const key = SPAWN_KEYS[slot];
+    if (!key) return 0;
+    const ack = pb && pb.net && pb.net.localLoadout;
+    let id = ack ? Number(ack[key]) || 0 : 0;
+    if (!id) {
+      try {
+        const d = ws && ws.db && ws.db.defaultLoadout;
+        id = d ? Number(d[key]) || 0 : 0;
+      } catch (_) { }
+    }
+    if (!id || id === Number(spawnedId)) return 0;
+    return id;
+  }
+
+  function proxyWeaponId(id) {
+    if (!CFG.spawnProxy || !id) return id;
+    const pb = findPB();
+    const ws = weaponSystemOf(pb);
+    if (!ws || !Array.isArray(ws.slots)) return id;
+    let slot = -1;
+    for (let i = 0; i < ws.slots.length && i < 5; i++) {
+      const d = ws.slots[i] && ws.slots[i].def;
+      if (d && Number(d.id) === Number(id)) { slot = i; break; }
+    }
+    if (slot < 0) return id;
+    const rec = spawnProxy.get(slot);
+    if (!rec || rec.spawnedId !== Number(id)) return id;
+    const ack = pb.net && pb.net.localLoadout;
+    const key = SPAWN_KEYS[slot];
+    if (ack && key && Number(ack[key]) === Number(id)) {
+      spawnProxy.delete(slot); // server accepted this loadout
+      return id;
+    }
+    return rec.proxyId || id;
+  }
+
+  function proxyHit(payload) {
+    if (!CFG.spawnProxy || !payload || payload.preScaled || !spawnProxy.size) return;
+    const pb = findPB();
+    const ws = weaponSystemOf(pb);
+    if (!ws || !Array.isArray(ws.slots)) return;
+    const db = ws.db;
+    for (const [slot, rec] of spawnProxy) {
+      const cur = ws.slots[slot] && ws.slots[slot].def;
+      if (!cur || Number(cur.id) !== rec.spawnedId) continue;
+      const nm = payload.weapon;
+      if (nm && cur.name && nm !== cur.name) {
+        let sdef = null;
+        try { sdef = db && typeof db.def === "function" ? db.def(rec.spawnedId) : null; } catch (_) { }
+        if (!sdef || sdef.name !== nm) continue;
+      }
+      const pd = (() => { try { return db && typeof db.def === "function" ? db.def(rec.proxyId) : null; } catch (_) { return null; } })();
+      if (!pd) continue;
+      if (pd.name) payload.weapon = pd.name;
+      const dmg = Number(pd.damage) || Number(pd.pb && pd.pb.damage) || 0;
+      if (dmg > 0 && !payload.preScaled) payload.baseDamage = dmg;
+      payload.falloff = 1;
+      return;
+    }
+  }
+
+  function ensureSpawnProxyHooks(pb) {
+    if (!pb || !pb.net || pb.net.__pbSpawnProxyHook) return;
+    const net = pb.net;
+    try { Object.defineProperty(net, "__pbSpawnProxyHook", { value: 1, enumerable: false }); }
+    catch (_) { try { net.__pbSpawnProxyHook = 1; } catch (_) { } }
+
+    const fire = net.sendFire;
+    if (typeof fire === "function") {
+      net.sendFire = function (id, ...rest) {
+        let v = id;
+        try { v = proxyWeaponId(id); } catch (_) { }
+        return fire.call(this, v, ...rest);
+      };
+    }
+    const state = net.sendState;
+    if (typeof state === "function") {
+      net.sendState = function (payload, ...rest) {
+        try {
+          if (CFG.spawnProxy && payload && payload.weaponId) {
+            const pid = proxyWeaponId(payload.weaponId);
+            if (pid !== payload.weaponId) {
+              payload.weaponId = pid;
+              const def = weaponSystemOf(pb)?.db?.def?.(pid);
+              if (def && def.name) payload.weapon = def.name;
+            }
+          }
+        } catch (_) { }
+        return state.call(this, payload, ...rest);
+      };
+    }
+    const reload = net.sendReload;
+    if (typeof reload === "function") {
+      net.sendReload = function (id, ...rest) {
+        let v = id;
+        try { v = proxyWeaponId(id); } catch (_) { }
+        return reload.call(this, v, ...rest);
+      };
+    }
+    const hit = net.sendHit;
+    if (typeof hit === "function") {
+      net.sendHit = function (payload, ...rest) {
+        try { proxyHit(payload); } catch (_) { }
+        return hit.call(this, payload, ...rest);
       };
     }
   }
@@ -3622,10 +3744,18 @@
     if (Array.isArray(ws.owned)) ws.owned[slot] = id;
 
     if (owned === true) {
+      spawnProxy.delete(slot);
       syncRespawnLoadout(pb, ws);
       statusHold(`เสก ${def.name || id} — owned · เกิดใหม่ 1 ครั้งให้ server รับ`, 3000);
+    } else if (CFG.spawnProxy) {
+      ensureSpawnProxyHooks(pb);
+      const pid = legalProxyId(pb, ws, slot, id);
+      if (pid) spawnProxy.set(slot, { spawnedId: Number(id), proxyId: pid });
+      else spawnProxy.delete(slot);
+      statusHold(`เสก ${def.name || id} — นอก inventory · proxy ${pid || "?"}`, 3200);
     } else {
-      statusHold(`เสก ${def.name || id} — คง equip ไว้ (ไม่ sync respawn)`, 3000);
+      spawnProxy.delete(slot);
+      statusHold(`เสก ${def.name || id} — นอก inventory · ไม่ใช้ proxy (อาจไม่คิดดาเมจ)`, 3200);
     }
     return true;
   }
