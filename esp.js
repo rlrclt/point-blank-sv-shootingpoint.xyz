@@ -66,7 +66,7 @@
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.49";
+  const VERSION = "v1.54";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -228,7 +228,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.49</span>
+      <span id="pbTitle">PB ESP v1.54</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
     </div>
@@ -2360,6 +2360,12 @@
   let CAM_PITCH = 0, CAM_AT = 0;
   let synced = false;          // เอาหลัก = วาดใน render hook ของเกม | ไม่ใช่ = โหมดรอแล้วใช้ rAF เอง
   let _lastHookFrame = -1;
+  let lastDrawAt = performance.now();
+
+  function clearOverlay() {
+    try { ctx.clearRect(0, 0, cv.width, cv.height); } catch (_) { }
+  }
+
   function setMode(on) {
     if (synced === on) return;
     synced = on;
@@ -2377,6 +2383,12 @@
       } catch (_) {}
     }
     const pb = findPB();
+    if (!pb) {
+      clearOverlay();
+      if (synced) setMode(false);
+      setStatus("รอเข้าแมตช์...");
+      return;
+    }
     if (pb) {
       // เกมเรียก render หลาย pass ต่อเฟรม — hook พวกนี้ต้องรันครั้งเดียว
       const fn = pb.frameNo;
@@ -2388,6 +2400,7 @@
     }
     // กรอง pass อื่น (fp-scene / fx / mirror) — วาดเฉพาะ scene หลักของเกมเท่านั้น
     if (scene && pb?.scene && scene !== pb.scene) return;
+    lastDrawAt = performance.now();
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (CFG.showFps) {
       const dpr = devicePixelRatio || 1, text = `${fpsValue}${CFG.fpsLabel ? " FPS" : ""}`;
@@ -3069,6 +3082,21 @@
     if (pb) { fastSwapTick(pb); bonusTick(pb); }
       drawOnce(pb?.scene, cam);
   })();
+
+  /* Watchdog: when the match ends (or the game tears the renderer down) the
+     render hook stops firing, so nothing clears the overlay and the last ESP
+     frame stays on screen. If no draw happened for 1.5 s, wipe the canvas and
+     switch back to the rAF loop. */
+  setInterval(() => {
+    if (performance.now() - lastDrawAt <= 1500) return;
+    clearOverlay();
+    if (synced) setMode(false);
+    if (CFG.enabled) setStatus("ออกจากแมตช์ — ซ่อน ESP");
+  }, 700);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) clearOverlay();
+  }, false);
 
   /* ───── live recoil path ─────
      Classic bundles (pbmobile.app, pbblaze) keep the player in a top-level
