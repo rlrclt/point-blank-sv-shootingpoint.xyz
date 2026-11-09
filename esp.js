@@ -72,7 +72,7 @@
     spawnCooldownMs: 1200,
     spawnProxy: true,
   };
-  const VERSION = "v1.64";
+  const VERSION = "v1.65";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -247,7 +247,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.64</span>
+      <span id="pbTitle">PB ESP v1.65</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -3385,11 +3385,10 @@
     return ids;
   }
 
-  function serverOwns(pb, id) {
-    const sel = pb && pb.respawnMenu && pb.respawnMenu.sel;
-    const all = sel && Array.isArray(sel.allItems) ? sel.allItems : null;
-    if (!all) return null;
-    return all.some((x) => Number(x) === Number(id));
+  function ackOwns(pb, slot, id) {
+    const key = SPAWN_KEYS[slot];
+    const ack = pb && pb.net && pb.net.localLoadout;
+    return !!(key && ack && Number(ack[key]) === Number(id));
   }
 
   function serverOwnedIds(pb) {
@@ -3515,7 +3514,7 @@
             const ws2 = weaponSystemOf(this);
             if (ws2 && CFG.spawnProxy) {
               for (const [slot, id] of spawnKeep) {
-                if (serverOwns(this, id) === true) { spawnProxy.delete(slot); continue; }
+                if (ackOwns(this, slot, id)) { spawnProxy.delete(slot); continue; }
                 const pid = legalProxyId(this, ws2, slot, id);
                 if (pid) spawnProxy.set(slot, { spawnedId: Number(id), proxyId: pid });
               }
@@ -3577,7 +3576,7 @@
   }
 
   function proxyHit(payload) {
-    if (!CFG.spawnProxy || !payload || payload.preScaled || !spawnProxy.size) return;
+    if (!CFG.spawnProxy || !payload || !spawnProxy.size) return;
     const pb = findPB();
     const ws = weaponSystemOf(pb);
     if (!ws || !Array.isArray(ws.slots)) return;
@@ -3595,8 +3594,14 @@
       if (!pd) continue;
       if (pd.name) payload.weapon = pd.name;
       const dmg = Number(pd.damage) || Number(pd.pb && pd.pb.damage) || 0;
-      if (dmg > 0 && !payload.preScaled) payload.baseDamage = dmg;
-      payload.falloff = 1;
+      const curDmg = Number(cur.damage) || Number(cur.pb && cur.pb.damage) || 0;
+      const base = Number(payload.baseDamage) || 0;
+      if (payload.preScaled) {
+        if (base > 0 && dmg > 0 && curDmg > 0) payload.baseDamage = Math.max(1, Math.round((base * dmg) / curDmg));
+        else if (base <= 0 && dmg > 0) payload.baseDamage = dmg;
+      } else if (dmg > 0) {
+        payload.baseDamage = dmg;
+      }
       return;
     }
   }
@@ -3738,7 +3743,7 @@
 
     ensureSpawnKeepHooks(pb);
     const slot = Math.min(5, Math.max(1, Number(def.slot) || 1)) - 1;
-    const owned = serverOwns(pb, id);
+    const owned = ackOwns(pb, slot, id);
     spawnKeep.set(slot, id);
     try { if (typeof ws.equip === "function") ws.equip(id); } catch (_) { }
     if (Array.isArray(ws.owned)) ws.owned[slot] = id;
