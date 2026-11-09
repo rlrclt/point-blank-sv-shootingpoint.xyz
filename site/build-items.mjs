@@ -510,7 +510,11 @@ for (const [file, hash] of Object.entries(weaponModels)) {
   if (d.variant) tags.push(...d.variant.split(" ").slice(0, 2));
 
   const meta = modelByFile.get(file);
-  const ids = [...new Set([meta?.itemId, ...(meta?.itemIds ?? [])].filter(Boolean))];
+  const spawnIds = [...new Set([meta?.itemId, ...(meta?.itemIds ?? [])]
+    .filter((v) => v != null && v !== "")
+    .map(Number)
+    .filter((v) => Number.isFinite(v) && v > 0))];
+  const ids = spawnIds;
   let img = null;
   let official = null;
   for (const id of ids) {
@@ -532,6 +536,7 @@ for (const [file, hash] of Object.entries(weaponModels)) {
     path: `/assets/weapons/models/${file}`,
     hash,
     slug,
+    ...(spawnIds.length ? { itemId: spawnIds[0], itemIds: spawnIds } : {}),
     ...(img ? { img } : {}),
   });
 }

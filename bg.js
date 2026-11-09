@@ -15,6 +15,7 @@
    console: chrome.storage.local.get("pbEspDnr"). */
 
 const RULE_ID = 9101;
+const GUARD_RULE_ID = 9102;
 const UA = "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 
 const RULE = {
@@ -30,7 +31,7 @@ const RULE = {
     ]
   },
   condition: {
-    requestDomains: ["shootingpoint.xyz"],
+    requestDomains: ["shootingpoint.xyz", "trycloudflare.com"],
     resourceTypes: [
       "main_frame",
       "sub_frame",
@@ -48,6 +49,21 @@ const RULE = {
   }
 };
 
+/* The 2026 guard build hides window.__pb/__pbR on every non-localhost host
+   (`hn = /localhost/.test(hostname)` inside pb-guard-*.js). Redirect just that
+   module to our patched copy with hn=true so the page exposes the game object
+   again. Everything else in the guard (checks, reporting) stays intact. */
+const GUARD_RULE = {
+  id: GUARD_RULE_ID,
+  priority: 2,
+  action: { type: "redirect", redirect: { extensionPath: "/guard-patched.js" } },
+  condition: {
+    requestDomains: ["shootingpoint.xyz", "trycloudflare.com"],
+    resourceTypes: ["script"],
+    urlFilter: "pb-guard-"
+  }
+};
+
 const report = (ok, detail) => {
   try {
     chrome.storage.local.set({ pbEspDnr: { ok, detail: String(detail || ""), at: Date.now() } });
@@ -62,14 +78,17 @@ const install = () => {
       return;
     }
     chrome.declarativeNetRequest.updateDynamicRules(
-      { removeRuleIds: [RULE_ID], addRules: [RULE] },
+      { removeRuleIds: [RULE_ID, GUARD_RULE_ID], addRules: [RULE, GUARD_RULE] },
       () => {
         const err = chrome.runtime.lastError;
         if (err) { report(false, err.message || "updateDynamicRules failed"); return; }
         try {
           chrome.declarativeNetRequest.getDynamicRules((rules) => {
             const has = (rules || []).some((r) => r && r.id === RULE_ID);
-            report(has, has ? "rule " + RULE_ID + " active" : "rule missing after install");
+            const guard = (rules || []).some((r) => r && r.id === GUARD_RULE_ID);
+            report(has && guard, has && guard
+              ? "rules " + RULE_ID + "+" + GUARD_RULE_ID + " active"
+              : "rule missing after install");
           });
         } catch (e) { report(true, "installed (unverified)"); }
       }
@@ -82,3 +101,25 @@ const install = () => {
 install();
 chrome.runtime.onInstalled.addListener(install);
 chrome.runtime.onStartup.addListener(install);
+
+/* SAFETY → "เปิด Server Owner" asks the content script to open the options
+   page as a normal extension tab. Extension pages can call chrome.tabs and
+   read the live server-owned list through the injector bridge. */
+try {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || msg.type !== "pb-open-server-site") return;
+    try {
+      const ids = Array.isArray(msg.ids) ? msg.ids.map(Number).filter(Boolean) : [];
+      const owned = Array.isArray(msg.owned) ? msg.owned.map(Number).filter(Boolean) : [];
+      const p = new URLSearchParams();
+      if (ids.length) p.set("server", ids.join(","));
+      if (owned.length) p.set("owned", owned.join(","));
+      const hash = p.toString() ? "#" + p.toString() : "";
+      chrome.tabs.create({ url: chrome.runtime.getURL("site/index.html") + hash });
+      sendResponse({ ok: true });
+    } catch (e) {
+      sendResponse({ ok: false, error: String(e && e.message || e) });
+    }
+    return true;
+  });
+} catch (_) { }

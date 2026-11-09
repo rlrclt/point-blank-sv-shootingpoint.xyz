@@ -13,7 +13,7 @@
   const CFG = {
     enabled: true, box: false, hpBar: false, name: false, distance: true,
     snapline: false, headDot: true, showMe: false, showAlly: false,
-    noRecoil: false, noSpread: false, nrComp: 0,   // px ของการดันเมาส์ลงชดเชย (ES-module client)
+    noRecoil: false, noSpread: false, nrComp: 0,   // ตัวคูณชดเชยแนวตั้ง 0=1x, 24=3x (ES-module client)
     recoilLevel: 100,   // % การลดแรงดีด (100 = ตัดเต็ม, 0 = ปล่อยเต็ม)
     spreadLevel: 100,   // % การลด spread (100 = ตรงเป๊ะ, 0 = ปล่อยเต็ม)
     // --- เพิ่มฟีเจอร์ใหม่ ---
@@ -49,6 +49,8 @@
     reloadProfile: "custom",// "custom" | "item:<id>" | "off"
     bonusReload: 0.25,      // 0..0.9 — ค่าจริงของไอเท็มรีโหลดไว = 0.25
     bonusSwap: 0.5,         // 0..0.9
+    acShield: true,         // ทิ้ง packet รายงาน anti-cheat (opcode 9007)
+    panicOnAc: false,       // panic ทันทีถ้า AC ยังแจ้งเตือน (ผ่าน path อื่น)
     aimDrawFov: true,   // วาดวงกลม FOV
     aimDrawLock: true,  // วาดจุดล็อค (วงกลม/กากบาทที่ joint)
     aimDrawLink: true,  // เส้นจากกลางจอไปจุดล็อค
@@ -64,7 +66,7 @@
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.24";
+  const VERSION = "v1.49";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -75,9 +77,8 @@
       if (!raw) return;
       const data = JSON.parse(raw);
       for (const k of Object.keys(CFG)) {
-        if (Object.prototype.hasOwnProperty.call(data, k) && typeof data[k] !== "object") {
-          CFG[k] = data[k];
-        }
+        if (!Object.prototype.hasOwnProperty.call(data, k)) continue;
+        if (typeof data[k] !== "object" || Array.isArray(data[k])) CFG[k] = data[k];
       }
     } catch (_) { }
   }
@@ -99,6 +100,34 @@
   };
   fit();
   addEventListener("resize", fit);
+
+  /* The game may be hosted in the top window or in a same-origin match
+     iframe (the site uses ?matchframe / ?matchsplit variants). esp.js can be
+     injected into the shell frame while __pb lives in a child frame, which
+     used to leave the panel stuck on “รอเข้าแมตช์”. Find the actual game
+     object instead of assuming window.__pb. */
+  function findPB() {
+    try { if (window.__pb) return window.__pb; } catch (_) { }
+    try { if (window.parent && window.parent !== window && window.parent.__pb) return window.parent.__pb; } catch (_) { }
+    try { if (window.top && window.top !== window && window.top.__pb) return window.top.__pb; } catch (_) { }
+    try {
+      for (let i = 0; i < window.frames.length; i++) {
+        try { if (window.frames[i].__pb) return window.frames[i].__pb; } catch (_) { }
+      }
+    } catch (_) { }
+    return null;
+  }
+  function findRenderer() {
+    try { if (window.__pbR) return window.__pbR; } catch (_) { }
+    try { if (window.parent && window.parent !== window && window.parent.__pbR) return window.parent.__pbR; } catch (_) { }
+    try { if (window.top && window.top !== window && window.top.__pbR) return window.top.__pbR; } catch (_) { }
+    try {
+      for (let i = 0; i < window.frames.length; i++) {
+        try { if (window.frames[i].__pbR) return window.frames[i].__pbR; } catch (_) { }
+      }
+    } catch (_) { }
+    return null;
+  }
 
   /* ---------- คณิต project 3D -> 2D (คูณ matrix เอง) ---------- */
   const clip = new Float64Array(16);
@@ -124,10 +153,10 @@
      ไม่มีเวกเตอร์เกม (ยังไม่เข้า match) ค่อย fallback เป็น manual */
   let engVec = null, engVecPB = null;
   function project(x, y, z, cam) {
-    const pbNow = window.__pb;
+    const pbNow = findPB();
     if (engVecPB !== pbNow) { engVec = null; engVecPB = pbNow; }  // match ใหม่ → เก็บ vector ใหม่
     if (!engVec) {
-      const c = window.__pb?.nameTags?.v ?? window.__pb?._v;
+      const c = pbNow?.nameTags?.v ?? pbNow?._v;
       if (c && typeof c.project === "function") engVec = c;
       else window.__pbEvecFail = 1;
     }
@@ -179,7 +208,7 @@
          ไม่ใช่แบบ match name จาก div เดิม (แม่นกว่ามาก) ---- */
   const gtMap = new Map();
   function wrapPlace() {
-    const nt = window.__pb?.nameTags;
+    const nt = findPB()?.nameTags;
     if (!nt || nt.__espWrap) return;
     nt.__espWrap = 1;
     const orig = nt.place;
@@ -199,13 +228,17 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.21</span><span id="pbX">×</span>
+      <span id="pbTitle">PB ESP v1.49</span>
+      <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
+      <span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
+      <button data-tab="combat">COMBAT</button>
       <button data-tab="aim">AIM</button>
-      <button data-tab="weapon">WEAPON</button>
       <button data-tab="esp">ESP</button>
+      <button data-tab="weapon">WEAPON</button>
+      <button data-tab="safety">SAFETY</button>
     </div>
     <div id="pbBody">
 
@@ -215,21 +248,25 @@
         <label><input type="checkbox" data-c="showFps"> แสดง FPS</label>
         <label>สไตล์ FPS <select id="pbFpsStyle"><option value="plain">เรียบ</option><option value="box">กล่อง</option><option value="neon">นีออน</option></select></label>
         <label><input type="checkbox" data-c="fpsLabel"> แสดงคำว่า FPS</label>
+        <div class="pbHelp" id="pbFpsInfo">FPS setting: —</div>
         <div class="pbSec">Movement / Spoof</div>
         <label><input type="checkbox" data-c="enabled"> เปิด ESP (F8)</label>
         <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
+      </div>
+
+      <div class="pbPane" data-pane="combat" style="display:none">
         <div class="pbSec">Recoil</div>
         <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด (F9)</label>
         <label style="display:block;font-size:10px;color:#9ab">ระดับลดแรงดีด: <b id="pbRecLvlVal">100</b>%
           <input type="range" id="pbRecLvl" min="0" max="100" step="1" value="100" style="width:100%">
           <input type="number" id="pbRecLvlNum" min="0" max="100" step="1" value="100"
-            style="width:70px;background:#0f1317;color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
+            style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น</div>
         <div id="pbCompRow" style="display:none">
-          <label>แรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
+          <label>ความแรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
           <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0">
-          <div class="pbHelp">ไคลเอนต์ ES module — อ่านสถานะแรงดีดไม่ได้ จึงดันเมาส์ลงชดเชยแทน</div>
+          <div class="pbHelp">ไคลเอนต์ ES module — อ่านสถานะแรงดีดไม่ได้ จึงดึงมุมกล้องกลับด้วย addLook (ไม่ปลอม event) · 0 = 1×, 24 = 3×</div>
         </div>
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
@@ -237,11 +274,12 @@
           <input type="range" id="pbHumanNet" min="0" max="1.5" step="0.05" value="0.35" style="width:100%">
         </label>
         <div class="pbHelp">ใส่ offset เล็ก ๆ ลง pitch/yaw จริงหลังยิง → คนที่สเปกดูเห็นปืนสะบัด ไม่นิ่งผิดปกติ (0 = ปิด)</div>
+        <div class="pbSec">Spread</div>
         <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
         <label style="display:block;font-size:10px;color:#9ab">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
           <input type="range" id="pbSprLvl" min="0" max="100" step="1" value="100" style="width:100%">
           <input type="number" id="pbSprLvlNum" min="0" max="100" step="1" value="100"
-            style="width:70px;background:#0f1317;color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
+            style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0)</div>
       </div>
@@ -351,73 +389,106 @@
         <div class="pbHelp">ปิด skeleton/box/hp/name/humanize เพื่อลด lag</div>
       </div>
 
+      <div class="pbPane" data-pane="safety" style="display:none">
+        <div class="pbSec">Bridge</div>
+        <div class="pbHelp" id="pbBridgeInfo">bridge: —</div>
+        <div class="pbSec">Anti-Cheat</div>
+        <label><input type="checkbox" data-c="acShield"> ปิดการรายงาน anti-cheat (9007)</label>
+        <label><input type="checkbox" data-c="panicOnAc"> Panic ทันทีเมื่อ AC แจ้งเตือน</label>
+        <div class="pbHelp">AC ส่ง opcode 9007 เมื่อตรวจพบ — shield จะทิ้ง packet นั้น (warning ใน console ยังเห็น)</div>
+        <div class="pbHelp" id="pbAcStatus">AC shield: —</div>
+        <button id="pbOpenSite" type="button" style="width:100%;margin:4px 0;border-color:#5a2a2a;color:#ff4d5a">เปิด Server Owner (ดึงจากเกม)</button>
+        <div class="pbSec">Panic</div>
+        <button id="pbPanic" type="button" style="width:100%;color:#ff6b6b;border-color:#5a2a2a">PANIC — ปิดทุกฟีเจอร์ + ซ่อนแผง (F10)</button>
+        <div class="pbHelp">ใช้เมื่อมีคนดู/กล้อง/ผู้เล่น suspicious — ฟีเจอร์ทั้งหมดหยุดทำงานทันที กด Insert เพื่อเปิดแผงกลับ</div>
+        <div class="pbSec">ข้อจำกัด</div>
+        <div class="pbHelp">esp.js ไม่แตะ prototype/native, ไม่ปลอม DOM event, ไม่แก้ performance.now/Date.now, ไม่แก้ hp/speed/const</div>
+        <div class="pbHelp">ไม่มีอะไรการันตี 100% — เซิร์ฟเวอร์ยังตัดสินจากพฤติกรรม (hit-rate, drop/pickup ผิดปกติ) ได้เสมอ</div>
+      </div>
+
       <div id="pbStatus">—</div>
     </div>`;
 
   const css = document.createElement("style");
   css.textContent = `
     #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:238px;
-      background:#0b0f14;border:1px solid #22303f;border-radius:0;
-      font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#dfe5ec;user-select:none;
+      background:#120b0e;border:1px solid #4a262b;border-radius:0;
+      font:11.5px/1.4 'Segoe UI',Tahoma,sans-serif;color:#f4e7e9;user-select:none;
       box-shadow:0 14px 34px #000b;overflow:hidden;}
-    #pbEspPanel #pbh{background:#0f141b;}
-    #pbEspPanel #pbTabs{background:#0b1016;}
-    #pbEspPanel .pbSec{background:#0b1016;}
-    #pbEspPanel #pbStatus{background:#0b1016;}
-    #pbEspPanel #pbh{display:flex;justify-content:space-between;align-items:center;
-      padding:8px 10px;background:#0f141b;border-bottom:1px solid #262c33;cursor:grab;
-      font:700 10.5px 'Segoe UI';letter-spacing:2px;text-transform:uppercase;color:#4fa3ff;}
-    #pbEspPanel #pbX{cursor:pointer;color:#6e7a88;font:700 14px Tahoma;padding:0 4px;}
-    #pbEspPanel #pbX:hover{color:#4fa3ff;}
-    #pbEspPanel #pbTabs{display:flex;background:#0b1016;border-bottom:1px solid #262c33;}
-    #pbEspPanel #pbTabs button{flex:1;padding:7px 2px;background:transparent;border:0;
-      border-bottom:2px solid transparent;color:#7b8794;font:700 9px 'Segoe UI';
-      letter-spacing:1.2px;cursor:pointer;border-radius:0;}
-    #pbEspPanel #pbTabs button.on{color:#4fa3ff;border-bottom-color:#4fa3ff;background:#12161b;}
-    #pbEspPanel #pbBody{padding:0;display:block;}
+    #pbEspPanel #pbh{background:#170d11;}
+    #pbEspPanel #pbTabs{display:flex;background:#120b0e;border-bottom:1px solid #3a2227;}
+    #pbEspPanel #pbTabs button{flex:1 1 0;min-width:0;padding:7px 0;background:transparent;border:0;
+      border-bottom:2px solid transparent;color:#ab8b91;font:700 7.5px 'Segoe UI';
+      letter-spacing:.4px;cursor:pointer;border-radius:0;white-space:nowrap;overflow:hidden;}
+    #pbEspPanel #pbTabs button.on{color:#ff4d5a;border-bottom-color:#ff4d5a;background:#1b1013;}
+    #pbEspPanel #pbBody{padding:0;display:block;max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:hidden;}
+    #pbEspPanel #pbBody::-webkit-scrollbar{width:7px;}
+    #pbEspPanel #pbBody::-webkit-scrollbar-thumb{background:#45262c;}
     #pbEspPanel .pbSec{color:#78838f;font:700 9px 'Segoe UI';letter-spacing:1.6px;
-      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #4fa3ff;
-      background:#0b1016;border-bottom:1px solid #20262c;}
+      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #ff4d5a;
+      background:#120b0e;border-bottom:1px solid #20262c;}
     #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:23px;
-      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11px;color:#c3ccd6;}
-    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#4fa3ff;margin:0;cursor:pointer;}
+      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11px;color:#e7ced2;}
+    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#ff4d5a;margin:0;cursor:pointer;}
     #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;
       background:transparent;margin:3px 0 4px;padding:0 10px;cursor:pointer;}
-    #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:2px;background:#2b323a;}
+    #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:2px;background:#45262c;}
     #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:13px;
-      margin-top:-6px;background:#4fa3ff;border:0;}
-    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#0f1317;
-      color:#dfe5ec;border:1px solid #2b323a;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
+      margin-top:-6px;background:#ff4d5a;border:0;}
+    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#160d10;
+      color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
     #pbEspPanel select{max-width:150px;}
     #pbEspPanel input[type=number]{width:64px;text-align:right;}
     #pbEspPanel button{cursor:pointer;text-transform:uppercase;letter-spacing:.8px;}
-    #pbEspPanel button:hover{border-color:#4fa3ff;color:#4fa3ff;}
+    #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a;}
     #pbEspPanel .pbRow{display:flex;gap:4px;align-items:center;padding:4px 10px;
       border-bottom:1px solid rgba(255,255,255,.035);}
     #pbEspPanel .pbSeg{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.035);}
     #pbEspPanel .pbSeg label{flex:1;justify-content:center;border-bottom:0;}
-    #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #262c33;
-      background:#0b1016;color:#7be38a;font:10px Consolas,monospace;}
-    #pbEspPanel .pbHelp{font-size:9px;color:#6f7f96;line-height:1.4;margin:0;padding:0 10px 5px;}
+    #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #3a2227;
+      background:#120b0e;color:#ffb3b8;font:10px Consolas,monospace;}
+    #pbEspPanel .pbHelp{font-size:9px;color:#a37f86;line-height:1.4;margin:0;padding:0 10px 5px;}
+    #pbEspPanel input[type=text]{flex:1;min-width:0;background:#160d10;color:#f4e7e9;
+      border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
+    #pbEspPanel input[type=text]:focus{outline:0;border-color:#ff4d5a;}
     #pbBtnChip{position:fixed;right:10px;top:56px;z-index:2147483001;padding:4px 10px;
-      background:#0b0d10;color:#4fa3ff;font:700 11px 'Segoe UI';border:1px solid #262c33;
+      background:#120b0e;color:#ff4d5a;font:700 11px 'Segoe UI';border:1px solid #3a2227;
       border-radius:0;letter-spacing:1px;}
-    #pbEspPanel button:hover{border-color:#4fa3ff;color:#4fa3ff}
-    #pbEspPanel label:hover{background:rgba(79,163,255,.05)}
+    #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a}
+    #pbEspPanel label:hover{background:rgba(255,77,90,.06)}
   `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
   (document.body || document.documentElement).appendChild(panel);
 
 
-  const tabBtns = panel.querySelectorAll("#pbTabs button");
-  const panes = panel.querySelectorAll(".pbPane");
+  const tabBar = panel.querySelector("#pbTabs");
   const showTab = (name) => {
-    for (const b of tabBtns) b.classList.toggle("on", b.dataset.tab === name);
-    for (const p of panes) p.style.display = p.dataset.pane === name ? "block" : "none";
+    for (const b of tabBar.querySelectorAll("button[data-tab]")) {
+      b.classList.toggle("on", b.dataset.tab === name);
+    }
+    for (const p of panel.querySelectorAll("#pbBody .pbPane")) {
+      p.style.display = p.dataset.pane === name ? "block" : "none";
+    }
   };
-  for (const b of tabBtns) b.addEventListener("click", () => showTab(b.dataset.tab));
+  tabBar.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-tab]");
+    if (b) showTab(b.dataset.tab);
+  });
+
   showTab("core");
+
+  const acChip = panel.querySelector("#pbAcChip");
+  const updateAcChip = () => {
+    if (!acChip) return;
+    acChip.textContent = CFG.acShield ? "AC SHIELD ON" : "AC SHIELD OFF";
+    acChip.classList.toggle("off", !CFG.acShield);
+    acChip.title = CFG.acShield
+      ? "กำลังบล็อกรายงาน anti-cheat (9007) — คลิกไป SAFETY"
+      : "ยังไม่บล็อกรายงาน anti-cheat — คลิกไป SAFETY";
+  };
+  if (acChip) acChip.addEventListener("click", () => showTab("safety"));
+  updateAcChip();
 
   const fpsStyleSelect = panel.querySelector("#pbFpsStyle");
   fpsStyleSelect.value = ["plain", "box", "neon"].includes(CFG.fpsStyle) ? CFG.fpsStyle : "box";
@@ -433,7 +504,7 @@
     }
   }
   function hookGameFpsCounter() {
-    const hud = window.__pb?.hud;
+    const hud = findPB()?.hud;
     if (!hud || typeof hud.tickFps !== "function" || hud.tickFps.__pbFpsHook) return false;
     const original = hud.tickFps;
     const wrapped = function (...args) {
@@ -466,6 +537,14 @@
          that owns the recoil model */
       if (key === "noRecoil" && c.checked) {
         try { setTimeout(() => { scanEngine(); }, 600); } catch (_) {}
+      }
+      if (key === "unlockFps") {
+        applyFpsUnlock();
+        try {
+          setStatus(c.checked
+            ? "unlock FPS: ตั้ง Unlimited แล้ว — กด F5 (ถ้ายัง 75 = จอล็อก 75Hz)"
+            : "unlock FPS: ปิด (ไม่แก้ค่าที่เกมบันทึกไว้)");
+        } catch (_) { }
       }
     });
   }
@@ -1847,7 +1926,6 @@
   const humanState = {
     pitch: 0,        // offset แนวตั้ง (ขึ้น = บวก)
     yaw: 0,          // offset แนวนอน (ขวา = บวก)
-    fakeSpread: 0,   // ใช้แค่วาด crosshair ปลอมบน overlay
     lastShot: 0,     // timestamp ล่าสุดที่ยิง (ms)
     shotSeq: 0,      // ลำดับกระสุนในชุด
   };
@@ -1871,7 +1949,6 @@
     const seqFactor = Math.min(1, 0.4 + humanState.shotSeq * 0.12);
     humanState.pitch += CFG.humanPitchAmp * seqFactor + randGauss(CFG.humanPitchAmp * 0.15);
     humanState.yaw += randGauss(CFG.humanYawAmp * seqFactor);
-    humanState.fakeSpread = Math.max(humanState.fakeSpread, Math.abs(randGauss(CFG.humanSpreadDeg)));
 
     const amp = Math.max(0, Math.min(1.5, Number(CFG.humanNet) || 0));
     if (amp > 0) {
@@ -1908,7 +1985,6 @@
     if (!CFG.humanize || !CFG.noRecoil) {
       humanState.pitch = 0;
       humanState.yaw = 0;
-      humanState.fakeSpread = 0;
       return;
     }
 
@@ -1917,11 +1993,9 @@
 
     humanState.pitch -= humanState.pitch * returnRate;
     humanState.yaw -= humanState.yaw * returnRate;
-    humanState.fakeSpread *= Math.max(0, 1 - returnRate * 1.5);
 
     if (Math.abs(humanState.pitch) < 0.001) humanState.pitch = 0;
     if (Math.abs(humanState.yaw) < 0.001) humanState.yaw = 0;
-    if (humanState.fakeSpread < 0.001) humanState.fakeSpread = 0;
   }
 
   let activeWS = null;
@@ -2138,7 +2212,6 @@
           // reset humanState เมื่อเปลี่ยนปืน
           humanState.pitch = 0;
           humanState.yaw = 0;
-          humanState.fakeSpread = 0;
           humanState.shotSeq = 0;
           return res;
         };
@@ -2149,7 +2222,14 @@
   /* ---------- เฟรมวาด (sync กับ render ของเกมเป๊ะ ๆ) ---------- */
   const statusEl = panel.querySelector("#pbStatus");
   const titleEl = panel.querySelector("#pbTitle");
+  let statusHoldUntil = 0;
   const setStatus = (t) => { if (statusEl.textContent !== t) statusEl.textContent = t; };
+  /* Keep important spawn/pickup/error messages readable for a few seconds;
+     the per-frame ESP status would otherwise overwrite them instantly. */
+  const statusHold = (t, ms = 2500) => {
+    statusHoldUntil = performance.now() + ms;
+    setStatus(t);
+  };
 
   /* Which client are we on? Recoil can only be cancelled when its state is
      reachable: an old-style classic bundle publishes window.__pb, a classic
@@ -2159,7 +2239,7 @@
      read or zero the recoil accumulator. Saying so is better than a checkbox
      that silently does nothing. */
   const clientKind = () => {
-    try { if (window.__pb) return "legacy"; } catch (_) {}
+    try { if (findPB()) return "legacy"; } catch (_) {}
     try { if (typeof Ye !== "undefined" && Ye && Ye.s) return "live"; } catch (_) {}
     try { if (typeof P !== "undefined" && P && P.s && P.rec) return "live"; } catch (_) {}
     try { if (window.Ye && window.Ye.s) return "live"; } catch (_) {}
@@ -2296,7 +2376,7 @@
         CAM_AT = performance.now();
       } catch (_) {}
     }
-    const pb = window.__pb;
+    const pb = findPB();
     if (pb) {
       // เกมเรียก render หลาย pass ต่อเฟรม — hook พวกนี้ต้องรันครั้งเดียว
       const fn = pb.frameNo;
@@ -2317,7 +2397,7 @@
       if (CFG.fpsStyle === "box") {
         const w = ctx.measureText(text).width;
         ctx.fillStyle = "rgba(10,15,20,.78)"; ctx.fillRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
-        ctx.strokeStyle = "#4fa3ff"; ctx.strokeRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
+        ctx.strokeStyle = "#ff4d5a"; ctx.strokeRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
         ctx.fillStyle = "#fff"; ctx.fillText(text, 20 * dpr, 18 * dpr);
       } else {
         ctx.fillStyle = CFG.fpsStyle === "neon" ? "#42ffb0" : "#fff";
@@ -2326,7 +2406,8 @@
       }
       ctx.restore();
     }
-    if (!pb || !pb.me) { setStatus("รอเข้าแมตช์..."); return; }
+    if (!pb) { setStatus("รอเข้าแมตช์..."); return; }
+    if (!pb.me) { setStatus("พบเกมแล้ว — รอผู้เล่นเกิด/โหลดแมตช์"); return; }
     wrapPlace();
 
     // กล้อง = ตัวที่เกม "ส่งเข้า render จริงในเฟรมนี้" (โอเคสุดในการจับ pixel ถูกตำแหน่ง)
@@ -2350,18 +2431,6 @@
     const W = cv.width, H = cv.height, dpr = devicePixelRatio;
 
     // (HUD status ด้านบนซ้ายถูกถอดออกตามคำขอ)
-
-    // Humanize: crosshair บานหลอกบน overlay เท่านั้น (ไม่แตะ spread จริง)
-    if (CFG.humanize && CFG.noRecoil && humanState.fakeSpread > 0.001) {
-      const r = Math.max(2 * dpr, humanState.fakeSpread * 46 * dpr);
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,215,94,0.55)";
-      ctx.lineWidth = 1.2 * dpr;
-      ctx.beginPath();
-      ctx.arc(cv.width / 2, cv.height / 2, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
 
     // FOV circle + lock indicator (วาดหลัง clearRect เท่านั้น)
     if (CFG.aimAssist && CFG.aimDrawFov) drawFovCircle(cam);
@@ -2412,7 +2481,9 @@
 
     // ปิด ESP แต่ยังใช้ aim ต่อได้ (FOV/lock indicator ถูกวาดไปแล้วด้านบน)
     if (!CFG.enabled) {
-      setStatus(`ESP: ปิด (F8 เปิด) | AIM: ${CFG.aimAssist ? "ON" : "OFF"}`);
+      if (performance.now() >= statusHoldUntil) {
+        setStatus(`ESP: ปิด (F8 เปิด) | AIM: ${CFG.aimAssist ? "ON" : "OFF"}`);
+      }
       return;
     }
 
@@ -2505,7 +2576,7 @@
         break;
       }
     } catch (e) { }
-    setStatus(statusMsg);
+    if (performance.now() >= statusHoldUntil) setStatus(statusMsg);
 
     // debug: กล่อง "ตัวเอง" — ถ้ากล่องตัวเองเกาะแน่นแต่กล่องคนอื่นขยับตามช้า = เพี้ยนที่ pos ของ actor
     // แต่ถ้ากล่องตัวเองก็ลอยไม่เกาะ = เพี้ยนที่ sync กล้อง
@@ -2526,16 +2597,63 @@
     }
   }
 
-  // The game's renderer loop applies its own 60 FPS pacer after rAF. Clearing
-  // that pacer lets the browser schedule frames at its native rate; rAF itself
-  // may still follow the display refresh rate and cannot be bypassed here.
-  function applyFpsUnlock() {
-    try {
-      const cap = window.__pbFpsPacer;
-      if (!cap) return;
-      cap.cap = CFG.unlockFps ? 0 : 60;
-    } catch (_) {}
+  /* FPS cap lives in the game's settings (`fpsCap`), read once at boot from
+     localStorage. 0 = Unlimited; the render loop then skips its limiter
+     (`b()` returns 0 → `if (F && ...)` is skipped). Changing the stored value
+     while the settings module is already loaded needs one reload.
+
+     Note: rAF still follows the display refresh rate. If the monitor is 75 Hz
+     the page cannot pass 75 without launching the browser with
+     `--disable-gpu-vsync --disable-frame-rate-limit` (see scripts/brave-fps.cmd). */
+  const FPS_SETTING_KEYS = ["pb.settings.mobile.v1", "pb.settings"];
+  function readStoredFpsCap() {
+    for (const k of FPS_SETTING_KEYS) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const o = JSON.parse(raw);
+        if (o && typeof o === "object" && o.fpsCap !== undefined) {
+          return { key: k, cap: Number(o.fpsCap) || 0 };
+        }
+      } catch (_) { }
+    }
+    return null;
   }
+  function writeStoredFpsCap(cap) {
+    let hit = false;
+    for (const k of FPS_SETTING_KEYS) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const o = JSON.parse(raw);
+        if (!o || typeof o !== "object") continue;
+        if (Number(o.fpsCap) !== Number(cap)) {
+          o.fpsCap = cap;
+          localStorage.setItem(k, JSON.stringify(o));
+        }
+        hit = true;
+      } catch (_) { }
+    }
+    return hit;
+  }
+  function updateFpsInfo() {
+    const el = panel.querySelector("#pbFpsInfo");
+    if (!el) return;
+    const info = readStoredFpsCap();
+    const cap = info ? info.cap : 0;
+    if (!CFG.unlockFps) {
+      el.textContent = `FPS setting: ${cap === 0 ? "Unlimited (0)" : cap}`;
+      return;
+    }
+    el.textContent = cap === 0
+      ? "FPS setting: Unlimited — ถ้ายังไม่เกิน 75 แปลว่าจอ/เบราว์เซอร์ล็อกที่ refresh rate"
+      : `FPS setting: ${cap} → ตั้ง Unlimited แล้ว ต้องกด F5`;
+  }
+  function applyFpsUnlock() {
+    if (CFG.unlockFps) writeStoredFpsCap(0);
+    updateFpsInfo();
+  }
+  applyFpsUnlock();
 
   /* วาด "หลัง" renderer.render ของเกมพอดีทุกเฟรม — กล่องจะขยับพร้อมกล้องไม่มี lag
      (ไซต์ .th ไม่มีระบบตรวจ hook แบบ AC ของ .app จึงแนบปลอดภัย) */
@@ -2759,8 +2877,130 @@
     ensureBonusHooks(ws);
   }
 
+  /* ───── anti-cheat report shield ─────
+     The AC's Sv() logs "[anti-cheat] ..." and sends opcode 9007 on the game
+     connection (room.game.conn). The opcode is a normal JS connection method,
+     not WebSocket.prototype.send, so wrapping this instance does not trip the
+     native-code check. Drop only 9007 and leave all gameplay traffic alone. */
+  function connListOf(pb) {
+    const list = [pb && pb.room && pb.room.game && pb.room.game.conn,
+      pb && pb.net && pb.net.room && pb.net.room.game && pb.net.room.game.conn];
+    return list.filter((c, i) => c && list.indexOf(c) === i);
+  }
+
+  function ensureAcShield(pb) {
+    if (!pb) return;
+    if (!window.__pbAcWarnHook) {
+      window.__pbAcWarnHook = true;
+      const ow = console.warn;
+      console.warn = function (...args) {
+        try {
+          const s = args.map(String).join(" ");
+          if (CFG.panicOnAc && !window.__pbAcPanicBusy && /\[anti-cheat\]/i.test(s)) {
+            window.__pbAcPanicBusy = true;
+            setTimeout(() => {
+              try { panicNow(); } catch (_) { }
+              window.__pbAcPanicBusy = false;
+            }, 0);
+          }
+        } catch (_) { }
+        return ow.apply(this, args);
+      };
+    }
+    if (!CFG.acShield) return;
+    for (const conn of connListOf(pb)) {
+      if (conn.__pbAcShield || typeof conn.send !== "function") continue;
+      try { Object.defineProperty(conn, "__pbAcShield", { value: 1, enumerable: false }); }
+      catch (_) { try { conn.__pbAcShield = 1; } catch (_) { } }
+      const orig = conn.send;
+      conn.send = function (opcode, ...rest) {
+        if (CFG.acShield && opcode === 9007) {
+          try { window.__pbAcBlocked = (window.__pbAcBlocked || 0) + 1; } catch (_) { }
+          return undefined;
+        }
+        return orig.call(this, opcode, ...rest);
+      };
+    }
+  }
+
+  const SPAWN_KEYS = ["primary", "secondary", "melee", "grenade", "special"];
+
+  /* ───── server inventory / allowed weapons ─────
+     The server does not publish a simple whitelist. What it does send is the
+     match respawn inventory (sel.allItems), the class bitmask
+     (net.weaponsFlag) and the acknowledged loadout (net.localLoadout).
+     allowedId(slotKey, id) is the client-side check the respawn UI itself
+     uses, so it is the closest answer to "will the server accept this?" */
+  const openSiteBtn = panel.querySelector("#pbOpenSite");
+  if (openSiteBtn) {
+    openSiteBtn.addEventListener("click", () => {
+      const pbNow = findPB();
+      const ids = serverAllIds(pbNow);
+      const owned = serverOwnedIds(pbNow);
+      try { window.postMessage({ __pbOpenServerSite: 1, ids, owned }, "*"); } catch (_) { }
+    });
+  }
+
+  /* page-world side of the options-page bridge: return all usable server
+     weapon IDs plus the subset owned by this account. */
+  addEventListener("message", (e) => {
+    if (e.source !== window || !e.data || !e.data.__pbGetServerOwned) return;
+    const req = e.data.__pbGetServerOwned;
+    const pbNow = findPB();
+    const ids = serverAllIds(pbNow);
+    const owned = serverOwnedIds(pbNow);
+    try { window.postMessage({ __pbServerOwned: req, ids, owned }, "*"); } catch (_) { }
+  }, false);
+
+  function panicNow() {
+    CFG.enabled = false;
+    CFG.aimAssist = false;
+    CFG.noRecoil = false;
+    CFG.noSpread = false;
+    CFG.fastSwap = false;
+    CFG.statBonus = false;
+    CFG.acShield = true;
+    CFG.showFps = false;
+    CFG.humanize = false;
+    for (const c of panel.querySelectorAll("input[data-c]")) {
+      if (Object.prototype.hasOwnProperty.call(CFG, c.dataset.c)) c.checked = !!CFG[c.dataset.c];
+    }
+    saveCfg();
+    try { setMenu(false); } catch (_) { }
+    statusHold("PANIC: ปิดฟีเจอร์ทั้งหมดแล้ว (Insert เพื่อเปิดแผง)");
+  }
+  const panicBtn = panel.querySelector("#pbPanic");
+  if (panicBtn) panicBtn.addEventListener("click", panicNow);
+  addEventListener("keydown", (e) => {
+    if (e.code !== "F10" && e.key !== "F10") return;
+    const t = e.target;
+    const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    if (typing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    panicNow();
+  }, true);
+
+
+  setInterval(() => {
+    const pbNow = findPB();
+    ensureAcShield(pbNow);
+    const acEl = panel.querySelector("#pbAcStatus");
+    if (acEl) {
+      acEl.textContent = `AC shield: ${CFG.acShield ? "ON" : "OFF"} · blocked ${window.__pbAcBlocked || 0}`;
+    }
+    updateAcChip();
+    const bridgeEl = panel.querySelector("#pbBridgeInfo");
+    if (bridgeEl) {
+      const r = findRenderer();
+      let frames = -1;
+      try { frames = window.frames.length; } catch (_) { }
+      bridgeEl.textContent = `bridge: pb=${pbNow ? "yes" : "no"} · me=${pbNow && pbNow.me ? "yes" : "no"} · player=${pbNow && pbNow.player ? "yes" : "no"} · renderer=${r ? "yes" : "no"} · frames=${frames}`;
+    }
+  }, 1500);
+
   function hookRenderer() {
-    const R = window.__pbR;
+    const R = findRenderer();
     if (!R || typeof R.render !== "function") return false;
     if (R === activeR) { setMode(true); return true; }
     if (R.__espRender) { activeR = R; setMode(true); return true; }
@@ -2772,7 +3012,7 @@
 
       // aim ต้อง tick ก่อนใส่ visual kick เพื่อไม่ให้ addLook/updateCamera ทับ offset
       // เกมอาจเรียก render หลาย pass ต่อเฟรม → tick ครั้งเดียวต่อ frameNo + เฉพาะ scene หลัก
-      const pbNow = window.__pb;
+      const pbNow = findPB();
       if (pbNow && camera && (!pbNow.scene || scene === pbNow.scene)) {
         const fn = pbNow.frameNo;
         if (typeof fn !== "number" || fn !== _lastAimFrame) {
@@ -2816,14 +3056,14 @@
   // รอเกมคลอด renderer แล้ว patch ทันที + ตรวจซ้ำเผื่อเกมสร้าง renderer ใหม่ (เข้าแมตช์ใหม่)
   (function boot() {
     if (!hookRenderer()) requestAnimationFrame(boot);
-    else setInterval(() => { const R = window.__pbR; if (R && R !== activeR) hookRenderer(); }, 2000);
+    else setInterval(() => { const R = findRenderer(); if (R && R !== activeR) hookRenderer(); }, 2000);
   })();
 
   // โหมดสำรอง: ก่อน hook ติด ยังวาดจาก rAF ของตัวเอง (สถานะจะบอก "โหมดรอ")
   (function fallbackLoop() {
     requestAnimationFrame(fallbackLoop);
     if (synced) return;
-    const pb = window.__pb;
+    const pb = findPB();
     const cam = pb?.player?.camera;
     if (pb && cam) aimAssistTick(pb, cam);
     if (pb) { fastSwapTick(pb); bonusTick(pb); }
@@ -2856,6 +3096,7 @@
   /* tell the truth about the checkbox on a client we cannot reach */
   setInterval(() => {
     if (!CFG.noRecoil) return;
+    if (performance.now() < statusHoldUntil) return;
     const k = clientKind();
     if (k === "esm") setStatus("norecoil: ES module — ใช้แรงชดเชยแทน");
     else if (k === "none") setStatus("norecoil: ยังไม่พบออบเจ็กต์ผู้เล่น");
@@ -2863,38 +3104,29 @@
 
   /* ───── compensation for clients whose recoil state is unreachable ─────
      On the ES-module client the recoil accumulator lives inside a chunk, so
-     nothing outside can zero it. What the game still does is read the mouse:
-     after each shot it raises the view, and the only lever left from outside is
-     to feed the opposite motion back through the same input path the game
-     listens on. A synthetic mousemove with a positive movementY (down) is
-     delivered to the page's own handler, which is exactly where the kick is
-     applied. The strength is a user slider because it depends on sensitivity
-     and weapon.
+     nothing outside can zero it. Use player.addLook() — the same API the game
+     itself calls for mouse input — instead of dispatching synthetic MouseEvents.
+     The anti-cheat counts untrusted events (input-synthetic); a synthetic
+     mousemove here would be both detectable and unnecessary because addLook()
+     is reachable on this client.
 
-     It only runs when the state path is unavailable — on a classic client the
-     accumulator is zeroed directly and this stays idle. */
+     The closed loop holds the camera pitch at the value it had when the trigger
+     went down and nudges it back with addLook() each frame. */
   let compAcc = 0, mouseDown1 = false;
   addEventListener("mousedown", (e) => { if (e.button === 0) mouseDown1 = true; }, true);
   addEventListener("mouseup", (e) => { if (e.button === 0) mouseDown1 = false; }, true);
   addEventListener("blur", () => { mouseDown1 = false; }, true);
 
-  /* ───── closed loop ─────
-     A fixed pump can only guess: the kick depends on the weapon, the stance and
-     the sensitivity. The camera pitch is measurable though — the render hook
-     hands us the camera every frame — so hold the pitch at the value it had
-     when the trigger went down: measure how far it climbed, convert that into
-     mouse pixels with a gain we learn on the fly, and push back down. If the
-     gain never changes the pitch, the game is ignoring synthetic events; that is
-     reported instead of pretending it works. */
-  let AIM_PITCH = 0, engaged = false, gain = 0.35;   // px per radian, learned
-  let lastErr = 0, useless = 0, ticks = 0;
-  const pushDown = (px) => {
-    try {
-      document.dispatchEvent(new MouseEvent("mousemove", {
-        movementX: 0, movementY: px, bubbles: true, cancelable: false
-      }));
-    } catch (_) {}
+  const pushPitch = (dPitch) => {
+    const pb = findPB();
+    if (pb && pb.player && typeof pb.player.addLook === "function") {
+      try { pb.player.addLook(dPitch, 0); } catch (_) { }
+      return true;
+    }
+    return false;
   };
+  let AIM_PITCH = 0, engaged = false;
+  let compWarned = false;
   const compTick = () => {
     requestAnimationFrame(compTick);
     const row = panel.querySelector("#pbCompRow");
@@ -2905,36 +3137,20 @@
 
     const pitch = CAM_PITCH;
     if (typeof pitch !== "number") return;
-    if (!engaged) { engaged = true; AIM_PITCH = pitch; lastErr = 0; useless = 0; ticks = 0; return; }
+    if (!engaged) { engaged = true; AIM_PITCH = pitch; return; }
 
     const err = pitch - AIM_PITCH;          /* positive = climbed (needs down) */
     if (Math.abs(err) < 0.0004) return;     /* within a tenth of a degree */
+    if (err <= 0) return;
 
-    /* learn: if pushing down did not reduce the error this frame, the event is
-       being ignored or the gain is wrong; adjust accordingly */
-    if (lastErr !== 0) {
-      const before = Math.abs(lastErr), after = Math.abs(err);
-      if (after >= before * 0.98) {
-        useless++;
-        if (before > 0.002) gain *= 1.6;    /* under-compensating */
-      } else {
-        useless = 0;
-      }
-    }
-    if (gain > 40) gain = 40;
-    if (gain < 0.02) gain = 0.02;
-
-    const px = Math.max(0.5, Math.min(30, Math.abs(err) * gain));
-    lastErr = err;
-    if (err > 0) {
-      const now = performance.now();
-      if (now - compAcc < 30) return;
-      compAcc = now;
-      pushDown(px);
-      ticks++;
-      if (useless > 45 && ticks > 60) {
-        setStatus("norecoil: เกมไม่รับ event ปลอม — ต้อง patch ที่ไฟล์เกม");
-      }
+    const now = performance.now();
+    if (now - compAcc < 16) return;
+    compAcc = now;
+    const mult = 1 + Math.max(0, Math.min(24, Number(CFG.nrComp) || 0)) / 12;
+    const step = Math.min(0.08, Math.max(0.0002, err) * mult);
+    if (!pushPitch(-step) && !compWarned) {
+      compWarned = true;
+      statusHold("norecoil: ไม่พบ addLook — ใช้แรงชดเชยแทนไม่ได้ (ไม่ปลอม event)", 4000);
     }
   };
   requestAnimationFrame(compTick);

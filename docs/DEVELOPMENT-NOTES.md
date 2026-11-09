@@ -32,21 +32,38 @@
 
 `pbrecon/` เป็น snapshot เก่า — ใช้ได้แค่บอกโครง แต่ **ค่าจริงต้องดึงสด**
 
-ใช้ `execute` + `fetch` (ไม่ต้องเปิดเบราว์เซอร์):
+ใช้สคริปต์ `pbrecon/refresh.mjs` (ไม่ต้องเปิดเบราว์เซอร์, ไม่ต้องลง dependency):
 
-```js
-// 1) bootstrap บอกชื่อ chunk ทั้งหมด
-const idx = await (await fetch("https://shootingpoint.xyz/bundle/index-5Gb5fZlZ.js")).text();
-const paths = [...new Set([...idx.matchAll(/bundle\/[\w.-]+\.js/g)].map(x => x[0]))];
-
-// 2) ดึงเฉพาะไฟล์ที่สงสัย แล้ว grep ในหน่วยความจำ
-const t = await (await fetch("https://shootingpoint.xyz/bundle/roomInputDevice-CcHtAxSP.js")).text();
-const i = t.indexOf("reportPcInput");
-t.slice(i - 2600, i + 2600);
+```bash
+node pbrecon/refresh.mjs --check   # ดูว่ามี index/guard/chunk ใหม่ไหม
+node pbrecon/refresh.mjs           # ดาวน์โหลดเฉพาะไฟล์ที่ยังไม่มีลง pbrecon/live/
 ```
 
-ข้อดี: ไม่ต้องโหลดทั้งเกม, ไม่ต้องรันเกม, ได้ source จริง 100%
+สคริปต์จะ:
+1. อ่านหน้าแรก → หา `index-*.js` ปัจจุบัน
+2. อ่าน `__vite__mapDeps` + ไล่ `import` ต่อ (BFS ตาม `--depth`, default 3)
+3. เทียบ hash กับไฟล์ใน `pbrecon/live/` แล้วโหลดเฉพาะที่เปลี่ยน
+4. เขียน `live/manifest.json` (index, guards, sha256 รายไฟล์) + `live/index.txt`
+5. เตือนเมื่อ `pb-guard-*.js` เปลี่ยน → ต้อง regenerate `guard-patched.js`
+
+ตัวเลือก:
+```bash
+--all             # โหลดใหม่ทุกไฟล์
+--include guard   # เฉพาะชื่อที่มีคำว่า guard
+--max 5           # จำกัดจำนวนไฟล์ (debug)
+--out live2       # เปลี่ยนโฟลเดอร์ปลายทาง
+--base https://... # เปลี่ยนโดเมน
+```
+
+ถ้าอยากดึงเดี่ยว ๆ ด้วย `execute` + `fetch` ก็ยังทำได้:
+
+```js
+const idx = await (await fetch("https://shootingpoint.xyz/bundle/index-DxpkJc0_.js")).text();
+const paths = [...new Set([...idx.matchAll(/bundle\/[\w.-]+\.js/g)].map(x => x[0]))];
+```
+
 ข้อควรระวัง: ต้องดึง **ชื่อไฟล์จาก bootstrap ปัจจุบัน** ทุกครั้ง เพราะ hash เปลี่ยนทุก deploy
+(สคริปต์จัดการให้แล้ว)
 
 ### 2.3 อ้างโปรเจกต์พี่น้อง
 

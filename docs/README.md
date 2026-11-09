@@ -22,7 +22,9 @@
 | [PBNEO-BUILD-METADATA.md](./PBNEO-BUILD-METADATA.md) | ตรวจ build จริง — IL2CPP metadata v108 อยู่ใน `.data`, class ไม่ถูก strip, แผน Il2CppDumper |
 | [development.md](./development.md) | โครงไฟล์, ลำดับการทำงานของ `esp.js`, วิธีเพิ่มฟีเจอร์ |
 | [anticheat.md](./anticheat.md) | anti-cheat ของ build `pbmobile-th.online` (static analysis) |
+| [ANTI-CHEAT-UPDATE.md](./ANTI-CHEAT-UPDATE.md) | สรุป build 2026-11: guard ซ่อน `__pb`, DNR 9102 + `guard-patched.js`, วิธีสแกนรอบถัดไป |
 | [offsets.md](./offsets.md) | offsets / runtime values จาก `pbrecon/` |
+| [WEAPON-SPAWN-LIST.md](./WEAPON-SPAWN-LIST.md) | สรุปฐานอาวุธ, ตัวกรอง owned/damage, วิธี export CSV ของปืนที่ server ยอมรับ |
 
 ## โครงสร้างไฟล์
 
@@ -38,8 +40,8 @@ pbrecon/          bundle ของเกม (อ่านอย่างเด�
 
 ## Version ปัจจุบัน
 
-- extension: **2.6.0**
-- `esp.js`: **v1.24**
+- extension: **2.8.14**
+- `esp.js`: **v1.49**
 
 ## Quick checks
 

@@ -110,6 +110,124 @@ if (ws.switchTimer > swapMs/1000) {
 ```
 ไม่แตะ `changeTimeOf` หรือ stat ใด ๆ — แค่ย่อเวลาที่เหลือตอนกำลังเปลี่ยน
 
+### Weapon Spawner (v1.28)
+
+`ws.db` คือ `WeaponDb` ที่โหลด `/assets/cross/weapons/weapons.json` (ปัจจุบัน ~5.7k defs)
+
+| method | ใช้ทำอะไร |
+|---|---|
+| `db.loaded` | true เมื่อโหลดครบ |
+| `db.all()` | คืน def ดิบทั้งหมด (`id`, `name`, `slot`, `slotName`, `family`, …) |
+| `db.def(id)` | สร้าง/แคช def เต็มตัว (params, fireMode, …) |
+| `db.find(name)` | หา def จากชื่อ |
+| `db.defaultLoadout` | `{ primary, secondary, melee, grenade }` |
+
+การเสกอาวุธใน `esp.js`:
+
+```js
+const ok = ws.equip(id);          // ใส่ช่องตาม def.slot + จำ id ใน ws.owned
+ws.spawnDraw(slot);               // ทางที่เกมใช้ตอน reset — สั่งวาด viewmodel ใหม่
+```
+
+หลัง `equip()` ตัว viewmodel อาจยังไม่ mount (ถืออากาศ) จึงมี retry:
+ถ้า `viewmodel.rigWeapon/current` ยังว่าง จะรอโหลด ~1.2 s แล้วเรียก
+`viewmodel.setWeapon(def)` ซ้ำ (สูงสุด 2 ครั้ง) โดยไม่ต้องสลับมีด
+ถ้า `spawnDraw()` ถูกข้ามและยังไม่มีการเรียก `setWeapon` (token ไม่เปลี่ยน)
+จะ retry ทันที
+
+**เกิดใหม่:**
+
+| สวิตช์ sync | สิ่งที่เกิดขึ้น |
+|---|---|
+| เปิด | เก็บ `spawnSynced` = ชุดปัจจุบัน → เขียน `respawnMenu.sel.equipped/pending` + `ws.owned` + `net.setRespawnWeapons([{itemId,objectId} ×5])` และ wrap `applyRespawnLoadout()` ให้ `equip()` ชุดนั้นซ้ำ → เกิดใหม่ถือกระบอกที่เสก |
+| ปิด | เก็บ id เดิมของช่องนั้น (`spawnPrev`) แล้วคืนให้ `ws.owned` ก่อน `ws.refill()` → อาวุธที่เสกอยู่แค่ชีวิตนั้น |
+
+`applyRespawnLoadout()` ของเกมอ่าน `respawnMenu.sel` **ก่อน** `ws.reset()`/`refill()`
+ดังนั้นการแก้แค่ `ws.owned` อย่างเดียวไม่พอ — ต้องอัปเดต `sel`/wrap ฟังก์ชันด้วย
+(ฝั่ง host/เซิร์ฟเวอร์อาจปฏิเสธไอเทมที่ไม่มีในคลังจริง)
+
+**Online damage proxy (v1.27):**
+
+เซิร์ฟเวอร์จะคิดดาเมจให้เฉพาะปืนที่อยู่ใน loadout ที่มัน Ack ไว้
+ถ้าเสกปืนที่ไม่มีในคลังจริง `sendFire` จะถูกเมิน (ยิงเห็นแต่ไม่โดน)
+
+`esp.js` จึงห่อ instance ของ `pb.net`:
+
+| method | สิ่งที่แก้ |
+|---|---|
+| `sendFire(id, …)` | เปลี่ยน `id` เป็นปืนเดิมของช่องนั้น (`localLoadout`/`owned` ก่อนเสก) |
+| `sendState(payload)` | เปลี่ยน `weaponId` + `weapon` ให้ตรงกับ proxy |
+| `sendReload(id)` | เปลี่ยน id เป็น proxy |
+| `sendHit(payload)` | เปลี่ยนชื่ออาวุธเป็น proxy (เฉพาะ hit ของตัวเอง) |
+
+proxy จะหยุดทำงานเองเมื่อ `net.localLoadout[slot]` เท่ากับ id ที่เสกแล้ว
+(เซิร์ฟเวอร์รับ loadout หลัง respawn) — ปิดสวิตช์ใน GUI ได้ถ้าไม่ต้องการ
+
+**Ground pickup mode (v1.28):**
+
+สวิตช์ `เสกแบบเก็บจากพื้น` (default ปิด เพราะ Safe Mode เปิดอยู่) ใช้กับ
+primary/secondary เท่านั้น เพราะ `pb.localDrop()` ของเกมปฏิเสธ slot > 1
+ถ้าจะใช้ pickup ต้องปิด Safe Mode ก่อน (การติ๊ก pickup จะปิด Safe Mode ให้อัตโนมัติ)
+
+ลำดับที่ `esp.js` ทำ:
+
+```js
+const dropped = ws.dropCurrent(true);      // เอาpืนเดิมของช่องออก
+pb.localDrop(dropped.def.id, ...);         // ส่ง drop ปืนเดิม
+pb.localDrop(def.id, slot, ammo, reserve); // สร้าง drop ของปืนที่เสก
+ws.pickUp(def.id, ammo, reserve);          // เก็บเข้าช่องจริง
+pb.net.sendPickup({ idx, weaponId, ... }); // แจ้ง pickup ให้ server/คนอื่น
+pb.drops.remove(idx);                      // ลบ drop ที่เก็บแล้ว
+```
+
+ข้อดี: เป็นเส้นทางเดียวกับตอนเดินเก็บปืนจากพื้น — server มีโอกาสรับรองอาวุธ
+และ client คนอื่นจะเห็นปืนที่เสกผ่าน `sendState` ตามปกติ (ไม่ต้อง proxy)
+ข้อจำกัด: ถ้า server ตรวจ drop/pickup เข้ม (เจ้าของ/ไอเทมในคลัง) อาจไม่รับ
+ในกรณีนั้นให้ปิด pickup แล้วกลับไปใช้ proxy
+
+**Reapply หลัง respawn (v1.30):**
+
+เซิร์ฟเวอร์มักคืนปืนเริ่มต้นให้ตอน respawn แม้ respawn menu จะโชว์ปืนที่เสก
+`spawnReapply` (default on) จะจำ `{slot, id}` ของ pickup ที่สำเร็จ แล้วหลัง `ws.refill()`
+(เกิดใหม่) จะ:
+1. รอ ~500 ms
+2. ถ้าช่องนั้นยังไม่ใช่ปืนที่เสก → ทิ้งปืนเริ่มต้น + `localDrop` + `pickUp` ซ้ำ
+3. ทำซ้ำทุก ~1.5 s ภายใน 6 s เผื่อ server ส่ง ack มาทีหลัง
+
+ต้องเสกด้วย pickup อีก 1 ครั้งหลังอัปเดต เพื่อให้จำ id (prefs ไม่มีในเซสชันเก่า)
+
+**SAFETY / Safe Mode (default on):**
+
+- spawn cooldown ขั้นต่ำ 1500 ms (ปรับได้ 0–5000)
+- โควต้าเสกสูงสุดต่อนาที (default 8)
+- บังคับใช้ proxy และข้าม pickup mode
+- `PANIC` / `F10`: ปิด ESP, aim, recoil/spread, fast swap, stat bonus, spawn/proxy/pickup
+  และซ่อนแผงทันที (Insert เปิดกลับ)
+- `AC Shield` (v1.29): hook `room.game.conn.send` (instance) ทิ้งเฉพาะ opcode `9007`
+  ซึ่งเป็นรายงาน anti-cheat; ไม่แตะ packet เกมอื่น
+- `Panic on AC`: panic ทันทีเมื่อ console มี `[anti-cheat]`
+
+**Server Check (v1.31):** แท็บ SAFETY → `CHECK` อ่านค่าที่เซิร์ฟเวอร์ส่งมา:
+
+| ค่า | แหล่ง | ใช้ตอบอะไร |
+|---|---|---|
+| `net.weaponsFlag` | room | bitmask คลาสที่เปิด (511 = เปิดทุกคลาส) |
+| `sel.enforcing()` | respawn menu | true = จำกัดเฉพาะไอเทมในคลัง/คลาสที่เปิด |
+| `sel.allItems` | respawn inventory | ไอเทมที่เซิร์ฟเวอร์ให้เลือกตอนเกิด |
+| `sel.lists[slot]` | respawn menu | รายการที่ผ่าน filter ของ slot นั้น |
+| `sel.allowedId(key,id)` | respawn menu | ฟังก์ชันเดียวกับ UI ใช้ตัดสินว่าไอเทมนั้นถูกAllow |
+| `net.localLoadout` | respawn ACK | ชุดที่เซิร์ฟเวอร์ Ack ล่าสุด |
+
+ถ้าไอเทมไม่เคยอยู่ใน `allItems` และ `allowedId` ตอบ false → respawn จะคืนปืนเริ่มต้น
+(แม้ pickup ระหว่างชีวิตจะได้ผลก็ตาม) ใช้ `spawnReapply` เพื่อ pickup ซ้ำหลังเกิด
+
+**Owned-only filter (v1.32):** ติ๊ก `เฉพาะปืนที่เซิร์ฟเวอร์มี (owned)` ใน Weapon Spawner
+รายการจะเหลือเฉพาะ id ที่อยู่ใน `sel.allItems` และผ่าน `allowedId` ของ slot นั้น
+ทำให้เลือกกระบอกที่ respawn ได้จริงโดยไม่โดนเซิร์ฟเวอร์สลับให้
+(สถานะ spawn จะขึ้น `· owned`)
+
+ดูรายละเอียดมุมมอง anti-cheat ที่ [`docs/anticheat.md`](anticheat.md) §5.1 + §5.2
+
 ---
 
 ## 6) Stat / upgrade (avatarCombat-Cn0Sf-BG.js)

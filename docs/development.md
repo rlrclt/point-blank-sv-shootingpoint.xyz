@@ -88,8 +88,8 @@ git commit -m "vX.Y.Z: <สรุป>"
 
 ## วิเคราะห์ build ใหม่ (workflow)
 
-1. DevTools → Network → โหลด `/` → เก็บ `main-*.js`, `config-*.js`, `avatarCombat-*.js`
-2. วางใน `pbrecon/` (หรือโฟลเดอร์แยก)
+1. `node pbrecon\refresh.mjs` → ได้ `pbrecon\live\` (index/guard/chunk ล่าสุด)
+2. อ่านไฟล์ที่สนใจใน `pbrecon\live\` (hash ตรงกับที่เกมโหลดจริง)
 3. หาค่าที่ต้องการ:
    - เวลา/สถานะ → `switchTimer`, `reloadTimer`, `nextShot`
    - ค่าคงที่ → `config-*` (MovementConfig), `pbConfig-*`
