@@ -68,7 +68,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.56";
+  const VERSION = "v1.57";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -243,7 +243,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.56</span>
+      <span id="pbTitle">PB ESP v1.57</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -1117,16 +1117,19 @@
   const PART_KEYS = ["head", "neck", "body", "upperarm", "forearm", "hand", "thigh", "shin", "foot"];
 
   function partOfName(name) {
-    const n = String(name || "").toLowerCase();
+    // game bones are like "R UpperArm", "L Forearm", "L Calf" — strip spaces,
+    // dots and underscores before matching so all rig naming styles work
+    const n = String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     if (/head|skull/.test(n)) return "head";
     if (/neck/.test(n)) return "neck";
     if (/hand|wrist|palm/.test(n)) return "hand";
-    if (/forearm|lower_?arm|arm2/.test(n)) return "forearm";
-    if (/upper_?arm|shoulder|arm1/.test(n)) return "upperarm";
-    if (/thigh|upper_?leg|leg1/.test(n)) return "thigh";
-    if (/calf|shin|lower_?leg|leg2|knee/.test(n)) return "shin";
+    if (/forearm|lowerarm|arm2/.test(n)) return "forearm";
+    if (/upperarm|shoulder|arm1/.test(n)) return "upperarm";
+    if (/thigh|upperleg|leg1/.test(n)) return "thigh";
+    if (/calf|shin|lowerleg|leg2|knee/.test(n)) return "shin";
     if (/foot|toe|ankle/.test(n)) return "foot";
     if (/pelvis|hips|root/.test(n)) return "body";
+    if (/spine|chest|torso|body/.test(n)) return "body";
     return "body";
   }
 
@@ -1233,7 +1236,8 @@
     const cached = _hbCache.get(root);
     if (cached !== undefined) {
       // null ไม่ cache ถาวร — โมเดลอาจยังโหลดไม่เสร็จในเฟรมแรก
-      if (cached !== null && cached.holder && isDescendantOf(root, cached.holder)) return cached.defs;
+      if (cached !== null && cached.holder && isDescendantOf(root, cached.holder) &&
+        performance.now() - cached.t < 3000) return cached.defs;
       if (cached !== null) _hbCache.delete(root);
     }
 
@@ -1257,7 +1261,7 @@
         }
       }
     }
-    const entry = (holder && defs && defs.length) ? { holder, defs } : null;
+    const entry = (holder && defs && defs.length) ? { holder, defs, t: performance.now() } : null;
     if (entry) _hbCache.set(root, entry);
     return entry ? entry.defs : null;
   }
@@ -1269,8 +1273,12 @@
     if (!root) return null;
     const cached = _candCache.get(root);
     // list ว่าง = โมเดลยังโหลดไม่เสร็จ → ไม่ cache ถาวร (retry เฟรมถัดไป)
-    if (cached && cached.length && isDescendantOf(root, cached[0].bone)) return cached;
-    if (cached && !cached.length) _candCache.delete(root);
+    // cache มีอายุ 3 วิ — โมเดลอาจโหลดกระดูกเพิ่มทีหลัง (แขน/ขา) และ list เก่า
+    // จะทำให้ส่วนใหม่เลือกไม่ได้ตลอดทั้งแมตช์
+    if (cached && cached.list && cached.list.length &&
+      isDescendantOf(root, cached.list[0].bone) &&
+      performance.now() - cached.t < 3000) return cached.list;
+    if (cached && cached.list && !cached.list.length) _candCache.delete(root);
 
     const list = [];
     const defs = getHitboxDefs(a);
@@ -1303,7 +1311,41 @@
       }
     }
 
-    // ไม่มี hitboxDefs เลย → ใช้กระดูกหลักที่รู้จัก (ยังเล็งกลางข้อต่อจริง)
+    // hitboxDefs ของเกมมีแค่ zone coarse (head/body/arm/hand/leg/foot) และบาง
+    // build ไม่มีกระดูกแขน/ขาครบ — เติมจาก skeleton จริง (ชื่อ "R UpperArm",
+    // "L Calf", ...) เพื่อให้โหมด ต้นแขน/ปลายแขน/มือ/ต้นขา/น่อง/เท้า ใช้ได้
+    const skel = getSkeletonData(a);
+    if (skel && skel.bones) {
+      const used = new Set(list.map((c) => c.bone));
+      if (!list.length) {
+        for (const b of skel.bones) {
+          list.push({
+            bone: b,
+            zone: zoneOfName(b.name),
+            part: partOfName(b.name),
+            local: [0, 0, 0],
+            name: b.name || "",
+          });
+        }
+      } else {
+        const have = new Set(list.map((c) => c.part || c.zone));
+        for (const b of skel.bones) {
+          if (used.has(b)) continue;
+          const part = partOfName(b.name);
+          if (part === "body" || have.has(part)) continue;
+          have.add(part);
+          list.push({
+            bone: b,
+            zone: zoneOfName(b.name),
+            part,
+            local: [0, 0, 0],
+            name: b.name || "",
+          });
+        }
+      }
+    }
+
+    // ไม่มีทั้ง hitbox และ skeleton → ใช้ความสูงมาตรฐานเดิม
     if (!list.length) {
       for (const mode of ["head", "neck", "chest", "pelvis"]) {
         const b = findBone(root, BONE_NAMES[mode]);
@@ -1318,7 +1360,7 @@
       }
     }
 
-    _candCache.set(root, list);
+    _candCache.set(root, { t: performance.now(), list });
     return list;
   }
 

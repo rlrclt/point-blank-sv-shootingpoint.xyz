@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.56 · `manifest.json` 2.8.21
+- `esp.js` v1.57 · `manifest.json` 2.8.22
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -40,6 +40,9 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 
 - จุดเล็ง: `head`, `neck`, `chest`, `pelvis`, `upperarm`, `forearm`, `hand`,
   `thigh`, `shin`, `foot`, `auto`
+- ชื่อกระดูกของเกมเป็นแบบ `R UpperArm`, `L Forearm`, `L Calf` — ตัวจับคู่
+  normalize ช่องว่าง/ขีดแล้ว จึงแยกต้นแขน/ปลายแขน/ต้นขา/น่องได้จริง
+- ถ้า hitbox มีแค่โซน coarse (arm/leg) จะเติมกระดูกแขน/ขาจาก skeleton ให้
 - **auto** = เลือกส่วนที่เห็นจริง + ใกล้ crosshair ที่สุด (ตรวจได้ถึง 10 จุด
   ต่อเป้า จึงล็อคขา/แขนได้แม้ส่วนอื่นถูกกำแพงบัง)
 - **ห้ามล็อค** = ติ๊กส่วนที่ไม่ต้องการให้ auto เลือก
