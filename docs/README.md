@@ -25,6 +25,7 @@
 | [ANTI-CHEAT-UPDATE.md](./ANTI-CHEAT-UPDATE.md) | สรุป build 2026-11: guard ซ่อน `__pb`, DNR 9102 + `guard-patched.js`, วิธีสแกนรอบถัดไป |
 | [offsets.md](./offsets.md) | offsets / runtime values จาก `pbrecon/` |
 | [WEAPON-SPAWN-LIST.md](./WEAPON-SPAWN-LIST.md) | สรุปฐานอาวุธ, ตัวกรอง owned/damage, วิธี export CSV ของปืนที่ server ยอมรับ |
+| [SHOP-WEAPONS.md](./SHOP-WEAPONS.md) | อาวุธที่วางขายจริงในร้าน (159 รายการ) + ID/stat/ราคา |
 
 ## โครงสร้างไฟล์
 

@@ -1,0 +1,160 @@
+﻿id,name,slot,class,family,damage,range,rpm,ammo,price,owned
+407002,C-5,explosive,ThrowingGrenade,GRENADE,60,30,60,1/1,"4,500",0
+407001,K-400,explosive,ThrowingGrenade,GRENADE,90,30,60,1/1,76,1
+407014,K-479,explosive,ThrowingGrenade,GRENADE,35,30,60,1/1,76,0
+407013,M-14 Mine,explosive,ThrowingGrenade,GRENADE,35,30,60,1/1,500,0
+407004,ระเบิดคู่ K-413,explosive,ThrowingGrenade,GRENADE,40,30,60,2/2,"3,750",0
+407012,ระเบิดลูกเกลี้ยง,explosive,ThrowingGrenade,GRENADE,25,30,60,1/1,76,0
+315003,Bone Knife,melee,DualKnife,KNIFE,0,1.5,50,0/0,"1,000",0
+315001,Dual Knife,melee,DualKnife,KNIFE,64,1.5,50,0/0,"4,500",0
+301004,Amok Kukri,melee,Knife,KNIFE,0,2,100,0/0,"9,000",0
+301017,Fang Blade,melee,Knife,KNIFE,0,2.2,109,0/0,"1,000",0
+301052,Fang Blade Brazuca,melee,Knife,KNIFE,0,2.2,109,0/0,"1,000",0
+301379,Fang Blade Element of Water,melee,Knife,KNIFE,0,2.2,109,0/0,"1,000",0
+301014,GH5007,melee,Knife,KNIFE,0,1.9,120,0/0,"1,000",0
+301001,M-7,melee,Knife,KNIFE,0,1.5,150,0/0,57,1
+301002,M-9,melee,Knife,KNIFE,0,1.5,150,0/0,100,0
+301007,Mini Axe,melee,Knife,KNIFE,0,1.7,60,2/2,"6,000",0
+103015,AK SOPMOD,primary,Assault,AR,33,160,706,30/150,"1,000",0
+103059,AK-47,primary,Assault,AR,33,140,600,30/90,"1,000",0
+103002,AK-47 Ext.,primary,Assault,AR,33,140,600,30/240,"1,000",0
+103115,AN-94,primary,Assault,AR,31,160,723,30/150,"1,000",0
+103670,AS Val,primary,Assault,AR,30,80,945,20/140,"1,000",0
+103036,AUG A3,primary,Assault,AR,30,100,857,30/150,"1,000",0
+103763,AUG A3 Element of Water,primary,Assault,AR,30,100,857,45/225,"1,000",1
+103406,AUG HBAR,primary,Assault,AR,29,110,822,42/210,"1,000",0
+103005,F2000 Ext.,primary,Assault,AR,26,120,857,30/150,"1,000",0
+103049,FAMAS G2,primary,Assault,AR,24,100,945,25/150,"1,000",0
+103050,FAMAS G2 Commando,primary,Assault,AR,24,100,945,25/150,"1,000",0
+103051,FAMAS G2 Sniper,primary,Assault,AR,24,100,945,25/150,"1,000",0
+103090,FAMAS G2M White Digital,primary,Assault,AR,24,100,945,25/150,"1,000",0
+103143,FG42,primary,Assault,AR,45,140,545,20/100,"1,000",0
+103067,G36C,primary,Assault,AR,25,100,750,30/90,"1,000",0
+103013,G36C Ext.,primary,Assault,AR,25,100,750,30/150,"1,000",0
+103284,Groza,primary,Assault,AR,30,100,723,30/150,"1,000",0
+103823,HK416,primary,Assault,AR,29,90,759,30/150,"1,000",0
+103827,HK416 TBA,primary,Assault,AR,31,100,795,30/150,"1,000",0
+103004,K-2,primary,Assault,AR,27,140,800,30/90,"1,000",1
+103236,K2C,primary,Assault,AR,28,140,811,30/150,"1,000",0
+103794,K2C EBR,primary,Assault,AR,36,120,732,30/150,"1,000",0
+103223,M14 EBR,primary,Assault,AR,42,140,480,20/100,"1,000",0
+103042,M4 SR-16 Lv1,primary,Assault,AR,26,100,833,50/250,"1,000",0
+103043,M4 SR-16 Lv2,primary,Assault,AR,26,100,833,50/250,"1,000",0
+103060,M4A1,primary,Assault,AR,26,100,833,30/90,"1,000",0
+103003,M4A1 Ext.,primary,Assault,AR,26,100,833,30/150,"1,000",0
+103549,MPT-76,primary,Assault,AR,30,110,822,30/150,"1,000",0
+103338,MSBS,primary,Assault,AR,27,100,882,30/150,"1,000",0
+103268,Pindad SS2 V5,primary,Assault,AR,27,100,876,30/150,"1,000",0
+103269,Pindad SS2 V5 G,primary,Assault,AR,27,100,876,45/225,"1,000",1
+103859,Pindad SS3,primary,Assault,AR,51,110,750,20/100,"1,000",0
+103153,SC-2010,primary,Assault,AR,30,105,795,30/150,"1,000",0
+103764,SC-2010 Element of Water,primary,Assault,AR,30,105,795,45/225,"1,000",0
+103778,SC-2010 TBA,primary,Assault,AR,30,90,795,30/150,"1,000",0
+103069,SCAR-H CQC,primary,Assault,AR,29,80,600,20/100,"1,000",0
+103094,SCAR-L Carbine,primary,Assault,AR,26,100,857,30/150,"1,000",0
+103095,SCAR-L Recon,primary,Assault,AR,26,100,857,30/150,"1,000",0
+103066,SG 550,primary,Assault,AR,30,160,706,30/90,"1,000",0
+103001,SG 550 Ext.,primary,Assault,AR,30,160,706,30/150,"1,000",0
+103306,SIG-Sauer MCX,primary,Assault,AR,28,100,833,30/150,"1,000",0
+103053,SS2-V4 Para Sniper,primary,Assault,AR,27,75,833,30/120,"1,000",1
+103514,STG44,primary,Assault,AR,34,105,667,30/150,"1,000",0
+103123,TAR-21,primary,Assault,AR,25,100,945,30/180,"1,000",0
+103890,XM7,primary,Assault,AR,49,120,652,20/100,"1,000",0
+103174,XM8,primary,Assault,AR,25,100,857,30/150,"1,000",0
+118006,Dual Micro Uzi,primary,DualSMG,SMG,15,56,923,60/300,"1,000",0
+118005,Dual Mini Uzi,primary,DualSMG,SMG,17,58,857,60/300,"1,000",0
+118004,Dual Uzi,primary,DualSMG,SMG,19,60,800,60/300,"1,000",0
+110017,Gatling,primary,Machinegun,MG,26,120,1364,80/240,"1,000",0
+110032,K-3,primary,Machinegun,MG,32,120,652,100/200,"1,000",0
+110004,L86 LSW,primary,Machinegun,MG,31,120,789,30/300,"1,000",0
+110040,PKM,primary,Machinegun,MG,45,120,556,100/200,"1,000",0
+110003,RPD,primary,Machinegun,MG,39,120,652,100/300,"1,000",0
+110011,Ultimax 100,primary,Machinegun,MG,37,120,652,100/300,"1,000",0
+106001,870MCS,primary,Shotgun,SG,23,65,60,8/32,"1,000",1
+106020,Kel-Tec KSG-15,primary,Shotgun,SG,21,65,60,14/32,"1,000",0
+106319,M1014,primary,Shotgun,SG,14,70,120,6/30,"1,000",0
+106005,M1887,primary,Shotgun,SG,23,65,55,8/32,"1,000",0
+106037,M1887 Brazuca,primary,Shotgun,SG,23,65,55,10/40,"1,000",1
+106246,M1887 Element of Water,primary,Shotgun,SG,23,65,55,12/48,"1,000",1
+106010,M1887 W.,primary,Shotgun,SG,23,65,55,8/32,"1,000",0
+106043,Remington ETA,primary,Shotgun,SG,15,65,83,8/32,"1,000",0
+106260,Saiga-12,primary,Shotgun,SG,15,70,133,6/30,"1,000",0
+106272,Saiga-12 CQB,primary,Shotgun,SG,22,40,238,8/32,"1,000",1
+106003,SPAS-15,primary,Shotgun,SG,25,65,80,6/30,"1,000",0
+106018,SPAS-15 MSC,primary,Shotgun,SG,19,90,86,10/40,"1,000",0
+106039,UTS-15,primary,Shotgun,SG,19,60,86,14/56,"1,000",0
+104033,AKS74U Ext.,primary,SMG,SMG,26,60,706,30/210,"1,000",0
+104434,APC9,primary,SMG,SMG,23,60,1000,30/210,"1,000",0
+136141,APC9 Element of Water,primary,SMG,SMG,23,60,1000,45/315,"1,000",0
+104006,K-1,primary,SMG,SMG,23,70,800,30/120,"1,000",1
+104013,Kriss S.V,primary,SMG,SMG,22,60,952,30/210,"1,000",0
+104139,Kriss S.V Brazuca,primary,SMG,SMG,22,60,952,45/315,"1,000",0
+104897,Kriss S.V CRB,primary,SMG,SMG,22,45,1500,30/210,"1,000",0
+136137,Kriss S.V Element of Water,primary,SMG,SMG,22,60,952,45/315,"1,000",0
+104054,KrissSuperV Vector,primary,SMG,SMG,22,60,952,30/210,"1,000",0
+104652,M1928 Thompson,primary,SMG,SMG,22,50,1091,50/150,"1,000",0
+104034,M4 CQB-R Lv1,primary,SMG,SMG,23,80,857,30/210,"1,000",0
+104035,M4 CQB-R Lv2,primary,SMG,SMG,23,80,857,30/210,"1,000",0
+104738,MP40,primary,SMG,SMG,24,70,759,32/160,"1,000",0
+104001,MP5K Ext.,primary,SMG,SMG,22,45,909,30/210,"1,000",0
+104056,MP7,primary,SMG,SMG,21,60,952,30/120,"1,000",0
+104107,MP9 Ext,primary,SMG,SMG,20,60,1008,30/210,"1,000",0
+104352,MX4,primary,SMG,SMG,25,60,952,30/210,"1,000",0
+104134,OA-93,primary,SMG,SMG,22,60,945,30/210,"1,000",0
+104011,P90 Ext.,primary,SMG,SMG,24,65,909,50/200,"1,000",0
+104138,P90 Ext. Brazuca,primary,SMG,SMG,24,65,909,75/300,"1,000",0
+104010,P90 M.C.,primary,SMG,SMG,22,100,857,30/150,"1,000",0
+104106,PP-19 Bizon,primary,SMG,SMG,24,65,923,53/212,"1,000",0
+104057,Spectre,primary,SMG,SMG,22,45,857,50/120,"1,000",0
+104002,Spectre Ext.,primary,SMG,SMG,22,45,857,50/300,"1,000",0
+104513,T77,primary,SMG,SMG,20,50,1364,30/210,"1,000",0
+136139,T77 Element of Water,primary,SMG,SMG,20,50,1364,45/315,"1,000",1
+104008,UMP45 Ext.,primary,SMG,SMG,25,50,652,25/200,"1,000",0
+105157,AS-50,primary,Sniper,SR,180,200,94,5/20,"1,000",0
+105375,BORA-12,primary,Sniper,SR,160,200,171,10/30,"1,000",0
+105588,BORA-12 TSR,primary,Sniper,SR,172,200,171,8/32,"1,000",0
+105030,Cheytac M200,primary,Sniper,SR,173,200,171,5/30,"1,000",0
+105083,Cheytac M200 Brazuca,primary,Sniper,SR,173,200,171,8/48,"1,000",1
+105001,Dragunov,primary,Sniper,SR,78,160,100,10/30,"1,000",0
+105561,Kar98k TSR,primary,Sniper,SR,163,200,240,5/30,"1,000",0
+105322,Kar98k ZF39,primary,Sniper,SR,110,200,240,5/30,"1,000",0
+105005,L115A1,primary,Sniper,SR,85,200,171,5/30,"1,000",0
+105018,M4 SPR Lv1,primary,Sniper,SR,40,160,300,20/60,"1,000",0
+105019,M4 SPR Lv2,primary,Sniper,SR,40,160,300,20/60,"1,000",0
+105020,M4 SPR Lv3,primary,Sniper,SR,40,160,300,20/60,"1,000",0
+105644,Mk.13 Mod.7,primary,Sniper,SR,164,200,171,5/30,"1,000",0
+105706,MTs-572,primary,Sniper,SR,190,200,86,6/18,"1,000",0
+105145,PGM Hecate2,primary,Sniper,SR,160,200,171,7/21,"1,000",0
+105002,PSG1,primary,Sniper,SR,81,180,100,5/40,"1,000",0
+105021,Rangemaster .338,primary,Sniper,SR,165,200,176,5/30,"1,000",0
+105022,Rangemaster 7.62,primary,Sniper,SR,130,180,188,10/30,"1,000",0
+105003,SSG-69,primary,Sniper,SR,90,180,200,5/30,"1,000",1
+105035,SVU,primary,Sniper,SR,85,160,135,15/45,"1,000",0
+105123,Tactilite T2,primary,Sniper,SR,190,200,182,5/20,"1,000",0
+105029,VSK94,primary,Sniper,SR,45,120,200,10/40,"1,000",0
+105072,Walther WA2000,primary,Sniper,SR,88,200,122,10/30,"1,000",0
+105031,Winchester M70,primary,Sniper,SR,110,200,200,7/35,"1,000",0
+105068,XM2010,primary,Sniper,SR,163,200,171,5/40,"1,000",0
+214002,Dual D-Eagle,secondary,DualHandGun,HG,28,45,171,14/42,"7,500",0
+214001,Dual Handgun,secondary,DualHandGun,HG,19,40,200,24/72,"6,000",0
+214017,Scorpion Vz.61,secondary,DualHandGun,HG,8,50,750,40/160,"2,500 | 250",0
+202007,C. Python,secondary,HandGun,HG,50,45,207,6/36,"10,500",0
+202049,C.Python Brazuca,secondary,HandGun,HG,50,45,207,8/48,"1,000",0
+202001,Desert Eagle,secondary,HandGun,HG,28,45,207,7/28,"4,500",0
+202011,Glock 18,secondary,HandGun,HG,17,45,667,17/68,300,0
+202003,K-5,secondary,HandGun,HG,17,45,273,12/48,57,0
+202024,Kriss Vector SDP,secondary,HandGun,HG,17,40,857,13/39,250,0
+202102,Luger P08,secondary,HandGun,HG,43,45,308,8/32,"7,500",0
+202013,R.B 454 SS2M,secondary,HandGun,HG,64,45,600,5/25,220,0
+202014,R.B 454 SS5M,secondary,HandGun,HG,71,45,600,5/25,"1,750 | 250",0
+202015,R.B 454 SS8M,secondary,HandGun,HG,75,45,600,5/25,300,0
+202016,R.B 454 SS8M+S,secondary,HandGun,HG,75,55,600,5/25,600,0
+202112,TEC-9,secondary,HandGun,HG,16,45,750,32/128,57,0
+202094,U22 Neos,secondary,HandGun,HG,26,45,414,10/40,"1,000",0
+527001,WP Smoke,special,ThrowingAttack,GRENADE,1,30,60,1/1,"4,500",0
+527003,WP Smoke Plus,special,ThrowingAttack,GRENADE,2,30,60,1/1,100,0
+528001,Medical Kit,special,ThrowingHeal,GRENADE,40,30,60,1/1,150,1
+508004,Flash Bang Plus,special,ThrowingSpecial,GRENADE,0,30,60,1/1,120,0
+508002,FlashBang,special,ThrowingSpecial,GRENADE,0,30,60,1/1,"2,250",1
+508001,Smoke,special,ThrowingSpecial,GRENADE,0,30,60,1/1,76,0
+508003,Smoke Plus,special,ThrowingSpecial,GRENADE,0,30,60,1/1,120,0

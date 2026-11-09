@@ -26,7 +26,7 @@ const types = {
 http
   .createServer((req, res) => {
     let rel = decodeURIComponent((req.url || "/").split("?")[0]);
-    if (rel === "/") rel = "/index.html";
+    if (rel === "/" || rel.endsWith("/")) rel += "index.html";
     const file = path.resolve(root, "." + rel);
     if (!file.startsWith(root)) {
       res.writeHead(403).end("forbidden");

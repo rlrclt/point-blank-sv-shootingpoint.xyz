@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PB Shop Weapons — ร้านค้า</title>
+<link rel="stylesheet" href="shop.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">POINT BLANK · SHOP DUMP</div>
+    <h1>อาวุธที่วางขายในร้านค้า</h1>
+    <p class="sub">ดึงจากร้านค้าจริงในเกม · แยกหมวดหมู่ · มี ID และสเตตัสของแต่ละกระบอก</p>
+    <div class="hero-meta">
+      <span class="pill" id="total">— รายการ</span>
+      <span class="pill ghost" id="owned">— มีแล้ว</span>
+      <span class="pill ghost" id="stamp">—</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="toolbar">
+    <div class="viewtabs" id="viewtabs">
+      <button type="button" data-view="shop" class="on">ร้านค้า</button>
+      <button type="button" data-view="premium">พรีเมียม</button>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg>
+      <input id="q" type="search" placeholder="ค้นหาชื่อ หรือ ID เช่น AK, 103059" autocomplete="off">
+    </div>
+    <div class="cats" id="cats"></div>
+  </section>
+
+  <div class="countline"><b id="shown">0</b> รายการ</div>
+  <section class="grid" id="grid"></section>
+  <section id="premiumView" hidden>
+    <div class="prem-note">ของพรีเมียม · กล่อง/แพ็ก และอาวุธที่ขายตรง · คลิก ID เพื่อคัดลอก</div>
+    <div class="prem-grid" id="premGrid"></div>
+  </section>
+  <div class="empty" id="empty" hidden>ไม่พบรายการที่ตรงกัน</div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="data.js"></script>
+<script src="shop.js"></script>
+</body>
+</html>
