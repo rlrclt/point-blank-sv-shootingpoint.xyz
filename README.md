@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.55 · `manifest.json` 2.8.20
+- `esp.js` v1.56 · `manifest.json` 2.8.21
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -24,7 +24,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 |---|---|
 | CORE | FPS counter, ปลดล็อก FPS, ปลอมเป็น Mobile |
 | COMBAT | NoRecoil, NoSpread, Humanize |
-| AIM | aimbot, preset (Rifle/Sniper/Shotgun), indicator, tuning |
+| AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค |
 | ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
 | SAFETY | master switch, คีย์ลัด, bridge, Anti-Cheat, panic |
@@ -35,6 +35,17 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 > - แผงจำตำแหน่ง + แท็บล่าสุด และ scroll แยกตามแท็บ
 > - PANIC ต้องกด 2 ครั้งภายใน 2 วินาที
 > - ตัวเลือกที่ยังไม่เปิดจะถูก disable (slider ไม่ทำงานจนกว่าจะเปิดฟีเจอร์)
+
+## AIM — จุดเล็งละเอียด
+
+- จุดเล็ง: `head`, `neck`, `chest`, `pelvis`, `upperarm`, `forearm`, `hand`,
+  `thigh`, `shin`, `foot`, `auto`
+- **auto** = เลือกส่วนที่เห็นจริง + ใกล้ crosshair ที่สุด (ตรวจได้ถึง 10 จุด
+  ต่อเป้า จึงล็อคขา/แขนได้แม้ส่วนอื่นถูกกำแพงบัง)
+- **ห้ามล็อค** = ติ๊กส่วนที่ไม่ต้องการให้ auto เลือก
+  (หัว/คอ/ลำตัว/ต้นแขน/ปลายแขน/มือ/ต้นขา/น่อง/เท้า)
+- ถ้าเลือกจุดเฉพาะแล้วไม่เห็น จะ fallback ไปส่วนที่เห็นตามลำดับของโซน
+  (ปิด Smart Zone เพื่อล็อคเฉพาะส่วนที่เลือกเท่านั้น)
 
 ## FPS unlock
 

@@ -40,7 +40,8 @@
     aimMode: "bot",  // "bot" = aimbot เต็มตัว (ล็อคอัตโนมัติ) | "assist" = assist เดิม (ต้องลากใกล้เอง)
     aimFov: 180.0,  // FOV วงกลม (degree) ที่ scan หาศัตรู — bot mode = 180 = ทั้งจอ
     aimSmooth: 6.0,    // smoothness: ยิ่งสูง = กล้องเข้าหาเป้าเร็วขึ้น (1=นุ่มสุด, 20=เกือบ snap)
-    aimBone: "head", // "head" | "neck" | "chest" | "pelvis" | "auto"
+    aimBone: "head", // head | neck | chest | pelvis | hand | upperarm | forearm | thigh | shin | foot | auto
+    aimBlock: [], // parts that must never be locked (head, body, hand, thigh, ...)
     aimVisibleOnly: true,   // ไม่ล็อคทะลุกำแพง (raycast จริง)
     fastSwap: false,        // เปลี่ยนปืนเร็ว
     swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
@@ -67,7 +68,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.55";
+  const VERSION = "v1.56";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -242,7 +243,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.55</span>
+      <span id="pbTitle">PB ESP v1.56</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -277,11 +278,6 @@
             style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น · default 100%</div>
-        <div id="pbCompRow" style="display:none">
-          <label>ความแรงชดเชยแนวตั้ง <b id="pbCompVal">0</b></label>
-          <input id="pbCompSlider" type="range" min="0" max="24" step="0.5" value="0">
-          <div class="pbHelp">ไคลเอนต์ ES module — อ่านสถานะแรงดีดไม่ได้ จึงดึงมุมกล้องกลับด้วย addLook (ไม่ปลอม event) · 0 = 1×, 24 = 3×</div>
-        </div>
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
         <label style="display:block;font-size:10px;color:#9ab">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
@@ -352,9 +348,28 @@
             <option value="neck">Neck</option>
             <option value="chest">Chest</option>
             <option value="pelvis">Pelvis</option>
-            <option value="auto">Auto</option>
+            <option value="upperarm">ต้นแขน</option>
+            <option value="forearm">ปลายแขน</option>
+            <option value="hand">มือ</option>
+            <option value="thigh">ต้นขา</option>
+            <option value="shin">น่อง</option>
+            <option value="foot">เท้า</option>
+            <option value="auto">Auto (อัจฉริยะ)</option>
           </select>
         </label>
+        <div class="pbSec">ห้ามล็อค</div>
+        <div class="pbBlockGrid">
+          <label><input type="checkbox" data-block="head"> หัว</label>
+          <label><input type="checkbox" data-block="neck"> คอ</label>
+          <label><input type="checkbox" data-block="body"> ลำตัว</label>
+          <label><input type="checkbox" data-block="upperarm"> ต้นแขน</label>
+          <label><input type="checkbox" data-block="forearm"> ปลายแขน</label>
+          <label><input type="checkbox" data-block="hand"> มือ</label>
+          <label><input type="checkbox" data-block="thigh"> ต้นขา</label>
+          <label><input type="checkbox" data-block="shin"> น่อง</label>
+          <label><input type="checkbox" data-block="foot"> เท้า</label>
+        </div>
+        <div class="pbHelp">Auto จะเลี่ยงส่วนที่ติ๊กไว้ และเลือกส่วนที่เห็นจริงใกล้ crosshair</div>
         <div class="pbHelp">ค่าเริ่มต้น: FOV 180 · Smooth 6 · Prediction 30 · Tracking 1.0</div>
       </div>
 
@@ -510,6 +525,8 @@
     #pbEspPanel label:hover{background:rgba(255,77,90,.06)}
     #pbEspPanel button:disabled,#pbEspPanel input:disabled,#pbEspPanel select:disabled{opacity:.35;cursor:not-allowed;}
     #pbEspPanel #pbAimPresets button{padding:3px 4px;font-size:8.5px;letter-spacing:.2px;}
+    #pbEspPanel .pbBlockGrid{display:grid;grid-template-columns:1fr 1fr 1fr;}
+    #pbEspPanel .pbBlockGrid label{font-size:10px;padding:3px 8px;min-height:20px;}
   `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
@@ -702,18 +719,6 @@
   // ผูก sliders
   /* compensation slider: only meaningful on a client whose recoil state is not
      reachable (ES-module build). It is revealed automatically below. */
-  const compRow = panel.querySelector("#pbCompRow");
-  const compSlider = panel.querySelector("#pbCompSlider");
-  const compVal = panel.querySelector("#pbCompVal");
-  if (compSlider) {
-    compSlider.value = CFG.nrComp == null ? 0 : CFG.nrComp;
-    if (compVal) compVal.textContent = compSlider.value;
-    compSlider.addEventListener("input", () => {
-      CFG.nrComp = parseFloat(compSlider.value) || 0;
-      if (compVal) compVal.textContent = compSlider.value;
-      saveCfg();
-    });
-  }
   const recLvl = panel.querySelector("#pbRecLvl");
   const recLvlVal = panel.querySelector("#pbRecLvlVal");
   const recLvlNum = panel.querySelector("#pbRecLvlNum");
@@ -921,7 +926,7 @@
     const dis = (sel, off) => {
       for (const el of panel.querySelectorAll(sel)) el.disabled = !!off;
     };
-    dis("#pbRecLvl, #pbRecLvlNum, #pbCompSlider", !CFG.noRecoil);
+    dis("#pbRecLvl, #pbRecLvlNum", !CFG.noRecoil);
     dis("#pbSprLvl, #pbSprLvlNum", !CFG.noSpread);
     dis("#pbHumanNet", !CFG.humanize);
     dis("#pbFpsStyle, input[data-c='fpsLabel']", !CFG.showFps);
@@ -934,6 +939,17 @@
   const boneSelect = panel.querySelector("#pbBoneSelect");  if (boneSelect) {
     boneSelect.value = CFG.aimBone;
     boneSelect.addEventListener("change", () => { CFG.aimBone = boneSelect.value; saveCfg(); });
+  }
+  if (!Array.isArray(CFG.aimBlock)) CFG.aimBlock = [];
+  for (const cb of panel.querySelectorAll("input[data-block]")) {
+    cb.checked = CFG.aimBlock.includes(cb.dataset.block);
+    cb.addEventListener("change", () => {
+      const set = new Set(Array.isArray(CFG.aimBlock) ? CFG.aimBlock : []);
+      if (cb.checked) set.add(cb.dataset.block);
+      else set.delete(cb.dataset.block);
+      CFG.aimBlock = [...set];
+      saveCfg();
+    });
   }
   const holdBind = panel.querySelector("#pbHoldBind");
   if (holdBind) {
@@ -1086,11 +1102,33 @@
 
   /* ---------- BONE HELPERS (ยึดกระดูกจริงของโมเดล) ---------- */
   const BONE_NAMES = {
-    head:   ["Head"],
+    head:   ["Head", "Skull"],
     neck:   ["Neck"],
-    chest:  ["Spine3", "Spine2", "Chest", "Spine1"],
+    chest:  ["Spine3", "Spine2", "Chest", "Spine1", "Torso"],
     pelvis: ["Pelvis", "Hips", "Root"],
+    hand:   ["Hand", "Wrist", "Palm"],
+    upperarm: ["UpperArm", "Upper_Arm", "Shoulder", "Arm1"],
+    forearm: ["Forearm", "LowerArm", "Lower_Arm", "Arm2"],
+    thigh:  ["Thigh", "UpperLeg", "Upper_Leg", "Leg1"],
+    shin:   ["Calf", "Shin", "LowerLeg", "Lower_Leg", "Leg2"],
+    foot:   ["Foot", "Toe", "Ankle"],
   };
+
+  const PART_KEYS = ["head", "neck", "body", "upperarm", "forearm", "hand", "thigh", "shin", "foot"];
+
+  function partOfName(name) {
+    const n = String(name || "").toLowerCase();
+    if (/head|skull/.test(n)) return "head";
+    if (/neck/.test(n)) return "neck";
+    if (/hand|wrist|palm/.test(n)) return "hand";
+    if (/forearm|lower_?arm|arm2/.test(n)) return "forearm";
+    if (/upper_?arm|shoulder|arm1/.test(n)) return "upperarm";
+    if (/thigh|upper_?leg|leg1/.test(n)) return "thigh";
+    if (/calf|shin|lower_?leg|leg2|knee/.test(n)) return "shin";
+    if (/foot|toe|ankle/.test(n)) return "foot";
+    if (/pelvis|hips|root/.test(n)) return "body";
+    return "body";
+  }
 
   function actorVisualRoot(a) {
     return a?.visualRoot ?? a?.visual?.root ?? null;
@@ -1168,6 +1206,12 @@
     neck:   ["head", "body", "arm", "hand", "leg", "foot"],
     chest:  ["body", "head", "arm", "hand", "leg", "foot"],
     pelvis: ["body", "leg", "head", "arm", "foot", "hand"],
+    hand:   ["hand", "arm", "body", "leg", "foot"],
+    upperarm: ["arm", "body", "hand", "leg", "foot"],
+    forearm:  ["arm", "hand", "body", "leg", "foot"],
+    thigh:  ["leg", "body", "foot", "arm", "hand"],
+    shin:   ["leg", "foot", "body", "arm", "hand"],
+    foot:   ["foot", "leg", "body", "arm", "hand"],
     auto:   ["head", "body", "arm", "hand", "leg", "foot"],
   };
 
@@ -1252,6 +1296,7 @@
         list.push({
           bone: d.bone,
           zone: d.zone || zoneOfName(d.boneName || d.bone?.name),
+          part: partOfName(d.boneName || d.bone?.name),
           local,
           name: d.boneName || d.bone?.name || "",
         });
@@ -1266,6 +1311,7 @@
         list.push({
           bone: b,
           zone: mode === "head" ? "head" : "body",
+          part: mode,
           local: [0, 0, 0],
           name: b.name || "",
         });
@@ -1324,14 +1370,16 @@
     if (!cands) return false;
     if (!cands.length) return false;
 
+    const block = Array.isArray(CFG.aimBlock) ? CFG.aimBlock : [];
+    const blockSig = block.join(",");
     const now = performance.now();
     const ce = _choiceCache.get(a);
-    if (ce && ce.mode === mode && ce.cands === cands && now - ce.t < AIM_VIS_REFRESH_MS) {
+    if (ce && ce.mode === mode && ce.block === blockSig && ce.cands === cands && now - ce.t < AIM_VIS_REFRESH_MS) {
       if (candWorld(ce.cand, out)) {
         // re-check visibility (cache อาจ stale ถ้าเป้าหลบหลังกำแพง)
         const vis = pointVisible(pb, cam, out[0], out[1], out[2]);
         if (vis === true || (vis === null && a && a.occluded !== true)) {
-          _lastAimPart = ce.cand.zone || mode;
+          _lastAimPart = ce.cand.part || ce.cand.zone || mode;
           return true;
         }
         _choiceCache.delete(a);
@@ -1348,6 +1396,8 @@
     const arr = [];
     const tmp = [0, 0, 0];
     for (const c of cands) {
+      const part = c.part || c.zone;
+      if (block.includes(part) || block.includes(c.zone)) continue;
       let zr = zones.indexOf(c.zone);
       if (zr < 0) zr = zones.length;
       // ปิด smart zone = ล็อกเฉพาะส่วนที่เลือกไว้เท่านั้น
@@ -1357,7 +1407,9 @@
       let br = 1;
       if (bonePref) {
         const n = (c.name || c.bone.name || "").toLowerCase();
-        br = bonePref.some((p) => n.includes(String(p).toLowerCase())) ? 0 : 1;
+        const want = (partOfName(n) === mode) ||
+          bonePref.some((p) => n.includes(String(p).toLowerCase()));
+        br = want ? 0 : 1;
       }
 
       let rank;
@@ -1378,15 +1430,15 @@
 
     let _visChecked = 0;
     for (const it of arr) {
-      if (_visChecked >= 4) break; // cap raycast ต่อ resolve ลด overhead
+      if (_visChecked >= 10) break; // cap raycast ต่อ resolve ลด overhead (เผื่อกรณีเห็นแค่ขา)
       if (!candWorld(it.c, out)) continue;
       _visChecked++;
       const vis = pointVisible(pb, cam, out[0], out[1], out[2]);
       if (vis === true || vis === null) {
         // null = raycast ตรวจไม่ได้ → ยอมรับเฉพาะเมื่อเกมยังไม่ยืนยันว่า "โดนบังครบทั้งตัว"
         if (vis === null && a && a.occluded === true) continue;
-        _choiceCache.set(a, { t: now, mode, cands, cand: it.c });
-        _lastAimPart = it.c.zone || mode;
+        _choiceCache.set(a, { t: now, mode, block: blockSig, cands, cand: it.c });
+        _lastAimPart = it.c.part || it.c.zone || mode;
         return true;
       }
     }
@@ -1406,10 +1458,13 @@
 
     // ไม่มีกระดูกเลย → ใช้ความสูงมาตรฐานเดียวกับเกม (main: kf/os)
     const crouch = !!(a?.crouch ?? a?.isCrouching?.());
-    const h = mode === "head" ? (crouch ? 1.08 : 1.63)
-      : mode === "neck" ? (crouch ? 0.98 : 1.48)
-        : mode === "pelvis" ? (crouch ? 0.55 : 0.98)
-          : (crouch ? 0.78 : 1.25);
+    const standH = {
+      head: 1.63, neck: 1.48, chest: 1.25, pelvis: 0.98,
+      upperarm: 1.35, forearm: 1.12, hand: 0.98,
+      thigh: 0.78, shin: 0.45, foot: 0.12,
+    };
+    const base = standH[mode] != null ? standH[mode] : standH.chest;
+    const h = crouch ? Math.max(0.1, base - 0.32) : base;
     out[0] = actorPos[0]; out[1] = actorPos[1] + h; out[2] = actorPos[2];
     _lastAimPart = mode;
 
@@ -3371,9 +3426,7 @@
   let compWarned = false;
   const compTick = () => {
     requestAnimationFrame(compTick);
-    const row = panel.querySelector("#pbCompRow");
     const esm = clientKind() === "esm";
-    if (row) row.style.display = (CFG.noRecoil && esm) ? "block" : "none";
     if (!CFG.noRecoil || !esm) { engaged = false; return; }
     if (!mouseDown1) { engaged = false; return; }
 
@@ -3395,6 +3448,6 @@
       statusHold("norecoil: ไม่พบ addLook — ใช้แรงชดเชยแทนไม่ได้ (ไม่ปลอม event)", 4000);
     }
   };
-  requestAnimationFrame(compTick);
+  /* vertical compensation control was removed (v1.56) — do not start the loop */
 })();
 
