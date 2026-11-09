@@ -70,7 +70,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.67";
+  const VERSION = "v1.66";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -245,14 +245,10 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <div id="pbhRow">
-        <span id="pbTitle">PB ESP v1.67</span>
-        <span id="pbX">×</span>
-      </div>
-      <div id="pbChips">
-        <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
-        <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
-      </div>
+      <span id="pbTitle">PB ESP v1.66</span>
+      <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
+      <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
+      <span id="pbX">×</span>
     </div>
     <div id="pbTabs">
       <button data-tab="core">CORE</button>
@@ -278,10 +274,10 @@
       <div class="pbPane" data-pane="combat" style="display:none">
         <div class="pbSec">Recoil</div>
         <label><input type="checkbox" data-c="noRecoil"> ไร้แรงดีด (F9)</label>
-        <label style="display:block;font-size:10px">ระดับลดแรงดีด: <b id="pbRecLvlVal">100</b>%
+        <label style="display:block;font-size:10px;color:#9ab">ระดับลดแรงดีด: <b id="pbRecLvlVal">100</b>%
           <input type="range" id="pbRecLvl" min="0" max="100" step="1" value="100" style="width:100%">
           <input type="number" id="pbRecLvlNum" min="0" max="100" step="1" value="100"
-            style="width:70px;text-align:right">
+            style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น · default 100%</div>
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
@@ -295,16 +291,16 @@
           <input type="range" id="pbHumanAmp" min="0" max="1.5" step="0.05" value="0.55">
         </label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
-        <label style="display:block;font-size:10px">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
+        <label style="display:block;font-size:10px;color:#9ab">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
           <input type="range" id="pbHumanNet" min="0" max="1.5" step="0.05" value="0.35" style="width:100%">
         </label>
         <div class="pbHelp">ใส่ offset เล็ก ๆ ลง pitch/yaw จริงหลังยิง → คนที่สเปกดูเห็นปืนสะบัด ไม่นิ่งผิดปกติ (0 = ปิด)</div>
         <div class="pbSec">Spread</div>
         <label><input type="checkbox" data-c="noSpread"> กระสุนตรง (NoSpread)</label>
-        <label style="display:block;font-size:10px">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
+        <label style="display:block;font-size:10px;color:#9ab">ระดับกระสุนตรง: <b id="pbSprLvlVal">100</b>%
           <input type="range" id="pbSprLvl" min="0" max="100" step="1" value="100" style="width:100%">
           <input type="number" id="pbSprLvlNum" min="0" max="100" step="1" value="100"
-            style="width:70px;text-align:right">
+            style="width:70px;background:#160d10;color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:2px 5px;text-align:right">
         </label>
         <div class="pbHelp">ตัดการกระจายกระสุน (xhPrev = 0) · default 100%</div>
       </div>
@@ -471,9 +467,9 @@
         <label><input type="checkbox" data-c="panicOnAc"> Panic ทันทีเมื่อ AC แจ้งเตือน</label>
         <div class="pbHelp">AC ส่ง opcode 9007 เมื่อตรวจพบ — shield จะทิ้ง packet นั้น (warning ใน console ยังเห็น)</div>
         <div class="pbHelp" id="pbAcStatus">AC shield: —</div>
-        <button id="pbOpenSite" type="button" style="width:100%;margin:4px 0">เปิด Server Owner (ดึงจากเกม)</button>
+        <button id="pbOpenSite" type="button" style="width:100%;margin:4px 0;border-color:#5a2a2a;color:#ff4d5a">เปิด Server Owner (ดึงจากเกม)</button>
         <div class="pbSec">Panic</div>
-        <button id="pbPanic" type="button" style="width:100%">PANIC — ปิดทุกฟีเจอร์ + ซ่อนแผง (F10)</button>
+        <button id="pbPanic" type="button" style="width:100%;color:#ff6b6b;border-color:#5a2a2a">PANIC — ปิดทุกฟีเจอร์ + ซ่อนแผง (F10)</button>
         <div class="pbHelp">ใช้เมื่อมีคนดู/กล้อง/ผู้เล่น suspicious — ฟีเจอร์ทั้งหมดหยุดทำงานทันที กด Insert เพื่อเปิดแผงกลับ</div>
         <div class="pbSec">ข้อจำกัด</div>
         <div class="pbHelp">esp.js ไม่แตะ prototype/native, ไม่ปลอม DOM event, ไม่แก้ performance.now/Date.now, ไม่แก้ hp/speed/const</div>
@@ -486,153 +482,66 @@
 
   const css = document.createElement("style");
   css.textContent = `
-    #pbEspPanel{position:fixed;top:56px;right:12px;z-index:2147483001;width:304px;
+    #pbEspPanel{position:fixed;top:56px;right:10px;z-index:2147483001;width:264px;
       max-width:calc(100vw - 16px);
-      background:
-        radial-gradient(130% 90% at 100% 0%,rgba(255,77,90,.16),rgba(255,77,90,0) 58%),
-        radial-gradient(120% 80% at 0% 100%,rgba(255,150,80,.08),rgba(0,0,0,0) 62%),
-        linear-gradient(168deg,#150b10,#0a0608 58%,#120a0e);
-      border:1px solid rgba(255,77,90,.22);border-radius:16px;
-      font:12.5px/1.45 'Segoe UI',Tahoma,sans-serif;color:#f6e9ec;user-select:none;
-      box-shadow:0 30px 64px -16px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06) inset,
-        0 0 0 1px rgba(255,255,255,.02) inset,0 0 42px -18px rgba(255,77,90,.55);
-      overflow:hidden;animation:pbIn .24s cubic-bezier(.2,.9,.3,1);}
-    #pbEspPanel::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
-      background:linear-gradient(90deg,rgba(255,77,90,0),#ff4d5a 22%,#ff9a5a 50%,#ff4d5a 78%,rgba(255,77,90,0));
-      opacity:.95;pointer-events:none;}
-    @keyframes pbIn{from{opacity:0;transform:translateY(-8px) scale(.975)}to{opacity:1;transform:none}}
-    #pbEspPanel #pbh{display:flex;flex-direction:column;gap:7px;padding:12px 11px 9px;
-      background:linear-gradient(180deg,rgba(255,77,90,.10),rgba(255,77,90,0));
-      border-bottom:1px solid rgba(255,77,90,.14);}
-    #pbEspPanel #pbhRow{display:flex;align-items:center;gap:8px;}
-    #pbEspPanel #pbChips{display:flex;align-items:center;gap:6px;}
-    #pbEspPanel #pbTitle{flex:1 1 auto;min-width:0;font:800 12.5px/1 'Segoe UI';letter-spacing:.5px;
-      text-transform:uppercase;
-      background:linear-gradient(92deg,#ffffff,#ffe1e4 38%,#ff9b6a);-webkit-background-clip:text;
-      background-clip:text;color:transparent;filter:drop-shadow(0 0 10px rgba(255,77,90,.35));
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    #pbEspPanel #pbMasterChip,#pbEspPanel #pbAcChip{display:inline-flex;align-items:center;gap:4px;
-      padding:3px 7px;border-radius:999px;border:1px solid rgba(255,77,90,.38);
-      background:rgba(255,77,90,.10);color:#ffb9bf;font:700 8.5px 'Segoe UI';letter-spacing:.6px;
-      cursor:pointer;white-space:nowrap;transition:background .16s,border-color .16s,color .16s,box-shadow .16s;}
-    #pbEspPanel #pbMasterChip::before,#pbEspPanel #pbAcChip::before{content:"";width:5px;height:5px;
-      border-radius:50%;background:#ff4d5a;box-shadow:0 0 8px #ff4d5a;}
-    #pbEspPanel #pbMasterChip:hover,#pbEspPanel #pbAcChip:hover{background:rgba(255,77,90,.18);
-      box-shadow:0 0 16px -4px rgba(255,77,90,.65);}
-    #pbEspPanel #pbMasterChip.off,#pbEspPanel #pbAcChip.off{border-color:rgba(255,255,255,.09);
-      background:rgba(255,255,255,.035);color:#8e777d;box-shadow:none;}
-    #pbEspPanel #pbMasterChip.off::before,#pbEspPanel #pbAcChip.off::before{background:#5a4349;box-shadow:none;}
-    #pbEspPanel #pbMasterChip{margin-left:0;}
-    #pbEspPanel #pbX{width:22px;height:22px;flex:0 0 22px;display:grid;place-items:center;border-radius:8px;
-      color:#a58a90;font:700 15px/1 'Segoe UI';cursor:pointer;transition:background .16s,color .16s;
-      margin-left:auto;}
-    #pbEspPanel #pbX:hover{background:rgba(255,77,90,.16);color:#fff;}
-    #pbEspPanel #pbTabs{display:flex;gap:2px;padding:6px;background:rgba(0,0,0,.28);
-      border-bottom:1px solid rgba(255,255,255,.05);}
-    #pbEspPanel #pbTabs button{flex:1 1 0;min-width:0;padding:7px 0 6px;border:0;border-radius:8px;
-      background:transparent;color:#9c8188;font:700 8px 'Segoe UI';letter-spacing:.4px;cursor:pointer;
-      white-space:nowrap;overflow:hidden;transition:color .16s,background .16s,box-shadow .16s;}
-    #pbEspPanel #pbTabs button:hover{color:#f0dadd;background:rgba(255,255,255,.045);}
-    #pbEspPanel #pbTabs button.on{color:#fff;
-      background:linear-gradient(180deg,rgba(255,77,90,.26),rgba(255,77,90,.07));
-      box-shadow:0 0 0 1px rgba(255,77,90,.38) inset,0 8px 18px -10px rgba(255,77,90,.9);}
-    #pbEspPanel #pbBody{display:block;max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:hidden;
-      padding:4px 0 2px;scrollbar-width:thin;scrollbar-color:#5a2f37 transparent;}
-    #pbEspPanel #pbBody::-webkit-scrollbar{width:8px;}
-    #pbEspPanel #pbBody::-webkit-scrollbar-track{background:transparent;}
-    #pbEspPanel #pbBody::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7a3a44,#45262c);
-      border-radius:99px;border:2px solid rgba(0,0,0,0);background-clip:padding-box;}
-    #pbEspPanel .pbSec{display:flex;align-items:center;gap:7px;margin:9px 9px 3px;padding:5px 8px;
-      border-radius:8px;color:#ff97a1;font:800 9px 'Segoe UI';letter-spacing:1.5px;text-transform:uppercase;
-      background:linear-gradient(90deg,rgba(255,77,90,.14),rgba(255,77,90,0));
-      border-left:2px solid #ff4d5a;}
-    #pbEspPanel label{display:flex;align-items:center;gap:8px;margin:0 8px;padding:5px 7px;
-      min-height:29px;border-radius:8px;border-bottom:1px solid rgba(255,255,255,.035);
-      cursor:pointer;font-size:11.5px;color:#e9d6da;transition:background .13s,color .13s;}
-    #pbEspPanel label:hover{background:rgba(255,77,90,.075);color:#fff;}
-    #pbEspPanel label input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:0 0 30px;
-      width:30px;height:16px;margin:0;border-radius:999px;background:#2a181d;
-      border:1px solid #4d2a30;position:relative;cursor:pointer;transition:background .18s,border-color .18s;}
-    #pbEspPanel label input[type=checkbox]::after{content:"";position:absolute;top:1px;left:1px;
-      width:12px;height:12px;border-radius:50%;background:#7d6167;transition:transform .18s,background .18s;}
-    #pbEspPanel label input[type=checkbox]:checked{background:linear-gradient(90deg,#ff3d4d,#ff8a4d);
-      border-color:transparent;box-shadow:0 0 14px -3px rgba(255,77,90,.85);}
-    #pbEspPanel label input[type=checkbox]:checked::after{transform:translateX(14px);background:#fff;}
-    #pbEspPanel input[type=radio]{accent-color:#ff4d5a;width:13px;height:13px;margin:0;}
-    #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;
-      background:transparent;margin:2px 0 3px;padding:0 6px;cursor:pointer;}
-    #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:999px;
-      background:linear-gradient(90deg,#5b2b33,#2d1a1f);}
-    #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
-      margin-top:-5px;border-radius:50%;background:#fff;border:2px solid #ff4d5a;
-      box-shadow:0 0 12px rgba(255,77,90,.75);transition:transform .12s;}
-    #pbEspPanel input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15);}
-    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel input[type=text],#pbEspPanel button{
-      background:linear-gradient(180deg,#241519,#170e12);color:#f6e9ec;border:1px solid #4a2830;
-      border-radius:8px;font:600 10.5px 'Segoe UI';padding:4px 7px;
-      transition:border-color .16s,box-shadow .16s,color .16s,background .16s;}
-    #pbEspPanel select{-webkit-appearance:none;appearance:none;max-width:154px;padding-right:24px;
-      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23c98d95' stroke-width='1.5'/></svg>");
-      background-repeat:no-repeat;background-position:right 8px center;}
-    #pbEspPanel select:hover,#pbEspPanel input[type=number]:hover,#pbEspPanel input[type=text]:hover,#pbEspPanel button:hover{
-      border-color:#ff4d5a;color:#fff;
-      box-shadow:0 0 0 1px rgba(255,77,90,.20) inset,0 8px 20px -12px rgba(255,77,90,.9);}
-    #pbEspPanel select:focus,#pbEspPanel input:focus{outline:0;border-color:#ff4d5a;
-      box-shadow:0 0 0 2px rgba(255,77,90,.18),0 0 18px -6px rgba(255,77,90,.8);}
-    #pbEspPanel input[type=color]{width:38px;height:22px;padding:0;border-radius:7px;
-      border:1px solid #4a2830;background:#170e12;cursor:pointer;}
-    #pbEspPanel input[type=number]{width:66px;text-align:right;}
+      background:#120b0e;border:1px solid #4a262b;border-radius:0;
+      font:12px/1.4 'Segoe UI',Tahoma,sans-serif;color:#f4e7e9;user-select:none;
+      box-shadow:0 14px 34px #000b;overflow:hidden;}
+    #pbEspPanel #pbh{background:#170d11;}
+    #pbEspPanel #pbTabs{display:flex;background:#120b0e;border-bottom:1px solid #3a2227;}
+    #pbEspPanel #pbTabs button{flex:1 1 0;min-width:0;padding:8px 0;background:transparent;border:0;
+      border-bottom:2px solid transparent;color:#ab8b91;font:700 8.5px 'Segoe UI';
+      letter-spacing:.3px;cursor:pointer;border-radius:0;white-space:nowrap;overflow:hidden;}
+    #pbEspPanel #pbTabs button.on{color:#ff4d5a;border-bottom-color:#ff4d5a;background:#1b1013;}
+    #pbEspPanel #pbBody{padding:0;display:block;max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:hidden;}
+    #pbEspPanel #pbBody::-webkit-scrollbar{width:7px;}
+    #pbEspPanel #pbBody::-webkit-scrollbar-thumb{background:#45262c;}
+    #pbEspPanel .pbSec{color:#78838f;font:700 9px 'Segoe UI';letter-spacing:1.6px;
+      text-transform:uppercase;padding:7px 10px 4px;border-left:2px solid #ff4d5a;
+      background:#120b0e;border-bottom:1px solid #20262c;}
+    #pbEspPanel label{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:24px;
+      border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;font-size:11.5px;color:#e7ced2;}
+    #pbEspPanel label input[type=checkbox]{width:13px;height:13px;accent-color:#ff4d5a;margin:0;cursor:pointer;}
+    #pbEspPanel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;
+      background:transparent;margin:3px 0 4px;padding:0 10px;cursor:pointer;}
+    #pbEspPanel input[type=range]::-webkit-slider-runnable-track{height:2px;background:#45262c;}
+    #pbEspPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:13px;
+      margin-top:-6px;background:#ff4d5a;border:0;}
+    #pbEspPanel select,#pbEspPanel input[type=number],#pbEspPanel button{background:#160d10;
+      color:#f4e7e9;border:1px solid #45262c;border-radius:0;font:600 10.5px 'Segoe UI';padding:3px 6px;}
+    #pbEspPanel input[type=color]{width:34px;height:20px;padding:0;border:1px solid #45262c;
+      background:#160d10;cursor:pointer;}
+    #pbEspPanel select{max-width:150px;}
+    #pbEspPanel input[type=number]{width:64px;text-align:right;}
     #pbEspPanel button{cursor:pointer;text-transform:uppercase;letter-spacing:.8px;}
-    #pbEspPanel button:active{transform:translateY(1px);}
+    #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a;}
+    #pbEspPanel .pbRow{display:flex;gap:4px;align-items:center;padding:4px 10px;
+      border-bottom:1px solid rgba(255,255,255,.035);}
+    #pbEspPanel .pbSeg{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.035);}
+    #pbEspPanel .pbSeg label{flex:1;justify-content:center;border-bottom:0;}
+    #pbEspPanel #pbStatus{margin:0;padding:6px 10px;border-top:1px solid #3a2227;
+      background:#120b0e;color:#ffb3b8;font:10px Consolas,monospace;}
+    #pbEspPanel .pbHelp{font-size:9.5px;color:#a37f86;line-height:1.4;margin:0;padding:0 10px 5px;}
+    #pbEspPanel #pbFeatureLine{margin:0;padding:3px 10px;border-top:1px solid #3a2227;
+      background:#140c0f;color:#ffd27a;font:600 9.5px 'Segoe UI';letter-spacing:.4px;}
+    #pbEspPanel #pbMasterChip{margin-left:auto;margin-right:4px;padding:1px 5px;border:1px solid #5a2a2a;
+      color:#ff4d5a;font:700 8px 'Segoe UI';letter-spacing:.5px;cursor:pointer;}
+    #pbEspPanel #pbMasterChip.off{border-color:#45262c;color:#a37f86;}
+    #pbEspPanel #pbAcChip{margin-right:6px;padding:1px 5px;border:1px solid #5a2a2a;
+      color:#ffd27a;font:700 8px 'Segoe UI';letter-spacing:.5px;cursor:pointer;}
+    #pbEspPanel #pbAcChip.off{border-color:#45262c;color:#a37f86;}
+    #pbEspPanel input[type=text]{flex:1;min-width:0;background:#160d10;color:#f4e7e9;
+      border:1px solid #45262c;border-radius:0;font:600 10px 'Segoe UI';padding:3px 6px;}
+    #pbEspPanel input[type=text]:focus{outline:0;border-color:#ff4d5a;}
+    #pbBtnChip{position:fixed;right:10px;top:56px;z-index:2147483001;padding:4px 10px;
+      background:#120b0e;color:#ff4d5a;font:700 11px 'Segoe UI';border:1px solid #3a2227;
+      border-radius:0;letter-spacing:1px;}
+    #pbEspPanel button:hover{border-color:#ff4d5a;color:#ff4d5a}
+    #pbEspPanel label:hover{background:rgba(255,77,90,.06)}
     #pbEspPanel button:disabled,#pbEspPanel input:disabled,#pbEspPanel select:disabled{opacity:.35;cursor:not-allowed;}
-    #pbEspPanel .pbRow{display:flex;gap:5px;align-items:center;margin:0 8px;padding:4px 0;}
-    #pbEspPanel .pbSeg{display:flex;gap:6px;margin:0 8px;padding:4px 0 6px;}
-    #pbEspPanel .pbSeg label{flex:1;justify-content:center;margin:0;border:1px solid #3d2229;
-      border-radius:8px;background:rgba(255,255,255,.02);min-height:26px;padding:4px 6px;font-size:10.5px;}
-    #pbEspPanel .pbSeg label:has(input:checked){border-color:#ff4d5a;background:rgba(255,77,90,.14);
-      color:#fff;box-shadow:0 0 0 1px rgba(255,77,90,.3) inset;}
-    #pbEspPanel #pbAimPresets button{flex:1;padding:5px 4px;font-size:8.5px;letter-spacing:.3px;}
-    #pbEspPanel .pbBlockGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:2px 8px 5px;}
-    #pbEspPanel .pbBlockGrid label{margin:0;min-height:24px;padding:4px 6px;font-size:10px;
-      border:1px solid transparent;background:rgba(255,255,255,.025);border-radius:7px;}
-    #pbEspPanel .pbBlockGrid label:hover{background:rgba(255,77,90,.10);}
-    #pbEspPanel .pbBlockGrid label input[type=checkbox]{-webkit-appearance:none;appearance:none;
-      flex:0 0 14px;width:14px;height:14px;border-radius:4px;border:1px solid #5a3038;
-      background:#1a0f13;position:relative;cursor:pointer;}
-    #pbEspPanel .pbBlockGrid label input[type=checkbox]::after{display:none;}
-    #pbEspPanel .pbBlockGrid label input[type=checkbox]:checked{background:linear-gradient(135deg,#ff4d5a,#ff8a4d);
-      border-color:transparent;box-shadow:0 0 10px -2px rgba(255,77,90,.9);}
-    #pbEspPanel .pbBlockGrid label input[type=checkbox]:checked::before{content:"";position:absolute;
-      left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
-    #pbEspPanel .pbHelp{font-size:9.5px;color:#a98e95;line-height:1.45;margin:0;padding:1px 15px 6px;}
-    #pbEspPanel #pbFeatureLine{margin:6px 8px 0;padding:5px 8px;border-radius:8px;
-      background:rgba(255,210,122,.06);border:1px solid rgba(255,210,122,.14);
-      color:#ffd27a;font:600 9.5px 'Segoe UI';letter-spacing:.3px;}
-    #pbEspPanel #pbStatus{margin:6px 8px 9px;padding:7px 9px;border-radius:9px;background:rgba(0,0,0,.38);
-      border:1px solid rgba(255,255,255,.06);color:#ffc2c8;font:10px/1.45 Consolas,monospace;
-      overflow-wrap:anywhere;white-space:pre-wrap;}
-    #pbEspPanel #pbOpenSite{width:100%;margin:4px 0;border-color:rgba(255,77,90,.45);color:#ff8f9a;}
-    #pbEspPanel #pbPanic{width:100%;color:#ffd7d9;border-color:rgba(255,77,90,.55);
-      background:linear-gradient(180deg,rgba(255,77,90,.32),rgba(255,77,90,.12));}
-    #pbEspPanel #pbPanic:hover{background:linear-gradient(180deg,rgba(255,77,90,.5),rgba(255,77,90,.2));}
-    #pbEspPanel #pbhRow::before{content:"";flex:0 0 7px;width:7px;height:7px;transform:rotate(45deg);
-      border-radius:2px;background:linear-gradient(135deg,#ff4d5a,#ffb06a);
-      box-shadow:0 0 14px rgba(255,77,90,.9);}
-    #pbEspPanel label:has(input[type=range]){flex-wrap:wrap;row-gap:1px;}
-    #pbEspPanel label input[type=range]{flex:1 1 100%;}
-    #pbEspPanel label{position:relative;}
-    #pbEspPanel label::before{content:"";position:absolute;left:0;top:24%;bottom:24%;width:2px;
-      border-radius:2px;background:linear-gradient(180deg,#ff4d5a,#ff9a5a);opacity:0;transition:opacity .15s;}
-    #pbEspPanel label:hover::before{opacity:.85;}
-    #pbEspPanel .pbSeg label::before,#pbEspPanel .pbBlockGrid label::before{display:none;}
-    #pbEspPanel::before{background-size:220% 100%;animation:pbScan 7s linear infinite;}
-    @keyframes pbScan{0%{background-position:-120% 0}100%{background-position:260% 0}}
-    #pbBtnChip{position:fixed;right:12px;top:56px;z-index:2147483001;padding:6px 12px;
-      background:linear-gradient(180deg,rgba(255,77,90,.22),rgba(255,77,90,.06)),#140c10;
-      color:#ffe2e5;font:800 11px 'Segoe UI';border:1px solid rgba(255,77,90,.5);border-radius:999px;
-      letter-spacing:1px;cursor:pointer;
-      box-shadow:0 10px 26px -12px rgba(255,77,90,.9),0 1px 0 rgba(255,255,255,.08) inset;}
-    #pbBtnChip:hover{border-color:#ff4d5a;color:#fff;box-shadow:0 0 22px -6px rgba(255,77,90,.95);}
+    #pbEspPanel #pbAimPresets button{padding:3px 4px;font-size:8.5px;letter-spacing:.2px;}
+    #pbEspPanel .pbBlockGrid{display:grid;grid-template-columns:1fr 1fr 1fr;}
+    #pbEspPanel .pbBlockGrid label{font-size:10px;padding:3px 8px;min-height:20px;}
   `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
