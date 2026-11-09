@@ -102,6 +102,7 @@ h1 { margin: 10px 0 6px; font-size: clamp(26px, 3vw, 40px); letter-spacing: -.5p
 .price .buy { color: var(--dim); font: 600 10px var(--font); text-transform: uppercase; letter-spacing: .6px; }
 
 .empty { padding: 50px 0 80px; text-align: center; color: var(--muted); }
+[hidden] { display: none !important; }
 
 .prem-note { color: var(--muted); font-size: 12px; padding: 4px 0 14px; }
 .prem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; padding-bottom: 50px; }
