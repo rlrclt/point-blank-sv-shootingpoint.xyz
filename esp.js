@@ -69,7 +69,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.60";
+  const VERSION = "v1.61";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -244,7 +244,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.60</span>
+      <span id="pbTitle">PB ESP v1.61</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -1431,8 +1431,9 @@
   const AIM_VIS_REFRESH_MS = 60;
 
   function resolveAimCandidate(pb, cam, a, mode, out) {
-    // เกมบอกว่าโดนบังครบทั้งตัว (gateVisual) → ไม่ต้องเสีย raycast
-    if (CFG.aimVisibleOnly && a && a.occluded === true) return false;
+    // เกมอาจตั้ง a.occluded = true เมื่อ "จุดกลางตัว" ถูกบัง
+    // แต่ครึ่งตัว/แขน/ขายังโผล่ — ห้ามใช้ค่านี้ตัดทั้งตัว
+    const actorOccluded = !!(a && a.occluded === true);
 
     const root = actorVisualRoot(a);
     if (root) { try { root.updateWorldMatrix(true, true); } catch (_) { } }
@@ -1500,18 +1501,28 @@
     arr.sort((A, B) => (A.rank - B.rank) || (A.ang - B.ang));
 
     let _visChecked = 0;
+    let unknown = null;
     for (const it of arr) {
-      if (_visChecked >= 10) break; // cap raycast ต่อ resolve ลด overhead (เผื่อกรณีเห็นแค่ขา)
+      if (_visChecked >= 16) break; // cap raycast — เผื่อกรณีเห็นแค่ครึ่งตัว/ขา
       if (!candWorld(it.c, out)) continue;
       _visChecked++;
       const vis = pointVisible(pb, cam, out[0], out[1], out[2]);
-      if (vis === true || vis === null) {
-        // null = raycast ตรวจไม่ได้ → ยอมรับเฉพาะเมื่อเกมยังไม่ยืนยันว่า "โดนบังครบทั้งตัว"
-        if (vis === null && a && a.occluded === true) continue;
+      if (vis === true) {
         _choiceCache.set(a, { t: now, mode, block: blockSig, cands, cand: it.c });
         _lastAimPart = it.c.part || it.c.zone || mode;
         return true;
       }
+      if (vis === null && !actorOccluded && !unknown) {
+        unknown = { cand: it.c, x: out[0], y: out[1], z: out[2] };
+      }
+    }
+    // ไม่มีจุดที่ raycast ยืนยันว่าโล่ง → ใช้จุดที่ตรวจไม่ได้เฉพาะเมื่อเกม
+    // ไม่ได้บอกว่าทั้งตัวถูกบัง (กันยิงทะลุกำแพง)
+    if (unknown) {
+      out[0] = unknown.x; out[1] = unknown.y; out[2] = unknown.z;
+      _choiceCache.set(a, { t: now, mode, block: blockSig, cands, cand: unknown.cand });
+      _lastAimPart = unknown.cand.part || unknown.cand.zone || mode;
+      return true;
     }
     return false;
   }
