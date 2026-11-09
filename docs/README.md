@@ -41,8 +41,8 @@ pbrecon/          bundle ของเกม (อ่านอย่างเด�
 
 ## Version ปัจจุบัน
 
-- extension: **2.8.27**
-- `esp.js`: **v1.62**
+- extension: **2.8.28**
+- `esp.js`: **v1.63**
 
 ## Quick checks
 

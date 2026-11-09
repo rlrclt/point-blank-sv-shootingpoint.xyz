@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.62 · `manifest.json` 2.8.27
+- `esp.js` v1.63 · `manifest.json` 2.8.28
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -27,6 +27,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 | AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค |
 | ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
+| SPAWN | เสกปืนจากร้าน/พรีเมียม/ทั้งคลังแสง (ไม่ใช้ proxy) |
 | SAFETY | master switch, คีย์ลัด, bridge, Anti-Cheat, panic |
 
 > - ชิป **ESP ON/OFF** ที่หัวแผง = เปิด/ปิด master (F8)
@@ -53,6 +54,25 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
   (ปิด Smart Zone เพื่อล็อคเฉพาะส่วนที่เลือกเท่านั้น)
 - **เผื่อสิ่งกีดขวาง** (0–0.35 m) = ยิงจุดรอบเป้าเพิ่มเมื่อ ray หลักชนขอบ/ราว
   ทำให้ล็อคผ่านช่องเล็ก ๆ ได้โดยไม่ทะลุกำแพงหนา
+
+## SPAWN — เสกปืน (ไม่ใช้ proxy)
+
+แท็บ **SPAWN** เลือกแหล่งได้:
+
+- `ร้านค้า` = 159 ID ที่วางขาย
+- `พรีเมียม` = อาวุธในกล่อง/ขายตรง (Barrett, Jackhammer, Zombie Slayer, GSL2016)
+- `ในกระเป๋า` = respawn inventory ของบัญชี
+- `ทั้งคลังแสง` = ทุก ID ที่ใช้งานได้
+
+คลิกชื่อ → `ws.equip()` + คงปืนไว้ในช่อง
+- **owned**: sync respawn loadout → เกิดใหม่ 1 ครั้ง server รับ
+- **นอก inventory**: คง equip ไว้ ไม่ sync respawn (host ยังคิดดาเมจจาก weaponId)
+
+ความปลอดภัย:
+- ไม่ใช้ proxy / pickup / fake fire id
+- hook เฉพาะ instance (`adoptServerLoadout`, `ws.refill`) ไม่แตะ prototype/native
+- cooldown 1.2 วิ และจำกัด 6 ครั้ง/นาที
+- ไม่ปลอม event/เวลา/ค่า hp-speed
 
 ## FPS unlock
 
