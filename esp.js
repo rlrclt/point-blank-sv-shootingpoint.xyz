@@ -33,7 +33,7 @@
     humanPitchAmp: 0.55,
     humanPitchSign: -1, // -1 = เด้งขึ้น (ค่าเริ่มต้น), 1 = เด้งลง
     humanYawAmp: 0.18,
-    humanReturnMs: 110,
+    humanReturnMs: 140,
     humanSpreadDeg: 0.06,
     humanNet: 0.35,   // องศา: สะบัดที่ "เน็ตเวิร์กเห็น" (คนดู/สเปกเห็น) 0 = ปิด
     // Aimbot
@@ -69,7 +69,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.59";
+  const VERSION = "v1.60";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -244,7 +244,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.59</span>
+      <span id="pbTitle">PB ESP v1.60</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -285,6 +285,9 @@
             <option value="-1">ขึ้น</option>
             <option value="1">ลง</option>
           </select>
+        </label>
+        <label>ความแรงสะบัด <span id="pbHumanAmpVal">0.55</span>°
+          <input type="range" id="pbHumanAmp" min="0" max="1.5" step="0.05" value="0.55">
         </label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
         <label style="display:block;font-size:10px;color:#9ab">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
@@ -791,6 +794,17 @@
       saveCfg();
     });
   }
+  const humanAmp = panel.querySelector("#pbHumanAmp");
+  const humanAmpVal = panel.querySelector("#pbHumanAmpVal");
+  if (humanAmp) {
+    humanAmp.value = CFG.humanPitchAmp == null ? 0.55 : CFG.humanPitchAmp;
+    if (humanAmpVal) humanAmpVal.textContent = humanAmp.value;
+    humanAmp.addEventListener("input", () => {
+      CFG.humanPitchAmp = Math.max(0, Math.min(1.5, parseFloat(humanAmp.value) || 0));
+      if (humanAmpVal) humanAmpVal.textContent = CFG.humanPitchAmp.toFixed(2);
+      saveCfg();
+    });
+  }
 
   const fovSlider = panel.querySelector("#pbFovSlider");
   const fovVal = panel.querySelector("#pbFovVal");
@@ -943,7 +957,7 @@
     };
     dis("#pbRecLvl, #pbRecLvlNum", !CFG.noRecoil);
     dis("#pbSprLvl, #pbSprLvlNum", !CFG.noSpread);
-    dis("#pbHumanNet", !CFG.humanize);
+    dis("#pbHumanNet, #pbHumanDir, #pbHumanAmp", !CFG.humanize);
     dis("#pbFpsStyle, input[data-c='fpsLabel']", !CFG.showFps);
     dis("#pbSwapSlider, #pbSwapNum, #pbSwapReset", !CFG.fastSwap);
     dis("#pbBonusSSlider, #pbBonusSNum, #pbBonusRSlider, #pbBonusRNum, #pbBonusReset, #pbSwapProfile, #pbReloadProfile", !CFG.statBonus);
@@ -2258,7 +2272,11 @@
     // Progressive pitch: กระสุนแรกดีดน้อย แล้วค่อยๆ มากขึ้น
     const seqFactor = Math.min(1, 0.4 + humanState.shotSeq * 0.12);
     humanState.pitch += CFG.humanPitchAmp * seqFactor + randGauss(CFG.humanPitchAmp * 0.15);
-    humanState.yaw += randGauss(CFG.humanYawAmp * seqFactor);
+    // สลับซ้าย/ขวาแทน noise ล้วน — ดูเป็นลายปืนจริงและไม่สั่นเท่าเดิม
+    const sway = (humanState.shotSeq % 2 ? 1 : -1) * CFG.humanYawAmp * seqFactor * 0.7;
+    humanState.yaw += sway + randGauss(CFG.humanYawAmp * 0.3);
+    humanState.pitch = Math.max(-2.5, Math.min(2.5, humanState.pitch));
+    humanState.yaw = Math.max(-1.2, Math.min(1.2, humanState.yaw));
 
     const amp = Math.max(0, Math.min(1.5, Number(CFG.humanNet) || 0));
     if (amp > 0) {
@@ -2273,13 +2291,14 @@
        humanization off, because it is what a spectator sees. */
     const amp = Math.max(0, Math.min(1.5, Number(CFG.humanNet) || 0));
     if (CFG.noRecoil && amp > 0) {
+      const sign = Number(CFG.humanPitchSign) || 1;
       const st = (pb && pb.me && typeof pb.me.pitch === "number") ? pb.me
         : (pb.player && (pb.player.s || pb.player)) || null;
       if (st && typeof st.pitch === "number") {
         const dp = netState.p - netState.ap;
         const dy = netState.y - netState.ay;
         if (dp || dy) {
-          st.pitch = Math.max(-1.4, Math.min(1.4, st.pitch + dp * DEG));
+          st.pitch = Math.max(-1.4, Math.min(1.4, st.pitch + dp * DEG * sign));
           st.yaw = (Number(st.yaw) || 0) + dy * DEG;
           netState.ap = netState.p;
           netState.ay = netState.y;

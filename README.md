@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.59 · `manifest.json` 2.8.24
+- `esp.js` v1.60 · `manifest.json` 2.8.25
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -23,7 +23,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 | แท็บ | มีอะไร |
 |---|---|
 | CORE | FPS counter, ปลดล็อก FPS, ปลอมเป็น Mobile |
-| COMBAT | NoRecoil, NoSpread, Humanize |
+| COMBAT | NoRecoil, NoSpread, Humanize (ทิศขึ้น/ลง + ความแรง) |
 | AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค |
 | ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
