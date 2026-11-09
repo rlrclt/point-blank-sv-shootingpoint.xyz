@@ -31,6 +31,7 @@
     // Humanization
     humanize: false,
     humanPitchAmp: 0.55,
+    humanPitchSign: -1, // -1 = เด้งขึ้น (ค่าเริ่มต้น), 1 = เด้งลง
     humanYawAmp: 0.18,
     humanReturnMs: 110,
     humanSpreadDeg: 0.06,
@@ -68,7 +69,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.57";
+  const VERSION = "v1.59";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -243,7 +244,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.57</span>
+      <span id="pbTitle">PB ESP v1.59</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -279,6 +280,12 @@
         </label>
         <div class="pbHelp">ตัดแรงดีด/กล้องสะบัดตอนยิง — ไม่เกี่ยวกับความแม่น · default 100%</div>
         <label><input type="checkbox" data-c="humanize"> Humanize (สะบัดปลอม)</label>
+        <label>ทิศสะบัด
+          <select id="pbHumanDir">
+            <option value="-1">ขึ้น</option>
+            <option value="1">ลง</option>
+          </select>
+        </label>
         <div class="pbHelp">kick หลอกที่กล้องตอน render เท่านั้น</div>
         <label style="display:block;font-size:10px;color:#9ab">สะบัดให้คนดูเห็น: <b id="pbHumanNetVal">0.35</b>°
           <input type="range" id="pbHumanNet" min="0" max="1.5" step="0.05" value="0.35" style="width:100%">
@@ -773,6 +780,14 @@
     hn.addEventListener("input", () => {
       CFG.humanNet = +hn.value;
       if (hnVal) hnVal.textContent = hn.value;
+      saveCfg();
+    });
+  }
+  const humanDir = panel.querySelector("#pbHumanDir");
+  if (humanDir) {
+    humanDir.value = String(Number(CFG.humanPitchSign) || 1);
+    humanDir.addEventListener("change", () => {
+      CFG.humanPitchSign = Number(humanDir.value) || 1;
       saveCfg();
     });
   }
@@ -3355,7 +3370,7 @@
         (Math.abs(humanState.pitch) > 0.0001 || Math.abs(humanState.yaw) > 0.0001)) {
         baseX = camera.rotation.x;
         baseY = camera.rotation.y;
-        camera.rotation.x = baseX + humanState.pitch * DEG;
+        camera.rotation.x = baseX + humanState.pitch * DEG * (Number(CFG.humanPitchSign) || 1);
         camera.rotation.y = baseY + humanState.yaw * DEG;
         if (typeof camera.updateMatrixWorld === "function") camera.updateMatrixWorld(true);
         kicked = true;
