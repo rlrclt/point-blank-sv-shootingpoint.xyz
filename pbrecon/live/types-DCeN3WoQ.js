@@ -1,0 +1,1 @@
+const e={Durable:1,Temporary:2,Permanent:3,CafePC:4},a={Primary:0,Secondary:1,Melee:2,Throw:3,Special:4,Chara:8,Head:9,Face:10,Jacket:11,Pocket:12,Glove:13,Belt:14,Holster:15,Skin:16,Beret:17},o=18,t={Cash:1,Gold:2};export{t as B,a as E,e as I,o as a};

@@ -1,0 +1,1 @@
+const o=e=>Number.isFinite(e)&&e>0&&e<180;function t(e){const n=e.extType?.toLowerCase();return n==="silencer"||n==="directmelee"||n==="crossfire"||n==="grenadelauncher"?"none":e.zoomType===3&&o(e.fovOnScope)&&(e.maxScopeLevel??1)>0?"scope":(e.zoomType===2||e.zoomType===4&&n==="steadyaim")&&o(e.fovOnZoom)?"zoom":"none"}export{t as w};

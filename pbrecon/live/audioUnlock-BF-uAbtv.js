@@ -1,0 +1,1 @@
+function s(e,t=window){const o=()=>{if(!(e.state==="running"||e.state==="closed"))try{e.resume().catch(()=>{})}catch{}},r=["pointerdown","pointerup","touchend","keydown"];for(const n of r)t.addEventListener(n,o,{capture:!0,passive:!0});return()=>{for(const n of r)t.removeEventListener(n,o,!0)}}export{s as b};

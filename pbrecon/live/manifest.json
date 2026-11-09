@@ -1,0 +1,646 @@
+{
+  "base": "https://shootingpoint.xyz",
+  "index": "index-DxpkJc0_.js",
+  "guards": [
+    "pb-guard-DbU4Ge0q.js"
+  ],
+  "fetchedAt": "2026-11-09T11:32:37.203Z",
+  "counts": {
+    "total": 105,
+    "new": 105,
+    "changed": 0,
+    "unchanged": 0
+  },
+  "files": [
+    {
+      "name": "PbHud-BgiatNVT.js",
+      "bytes": 67411,
+      "sha256": "6d6da22840b85224dd03e459b57882f5c8159052bd096de2916e51987167c6d8",
+      "status": "new"
+    },
+    {
+      "name": "PbHud-CBaf9u4k.css",
+      "bytes": 37431,
+      "sha256": "a9a6689e16ec9b74962888c1b2a2f50c209600ddb63e75883357f66740b63142",
+      "status": "new"
+    },
+    {
+      "name": "accessoryModel-C0F8XTWw.js",
+      "bytes": 2510,
+      "sha256": "1a607758dd6e3339d6b0d0b19124b9d79204f8b3b5e50ebb186d60491f11b8de",
+      "status": "new"
+    },
+    {
+      "name": "accessoryMount-7WgOJZq4.js",
+      "bytes": 61194,
+      "sha256": "69e57da56154eeb14e6d06aafbc6e46ff2235148e21aaeabbb3c92c368fa9603",
+      "status": "new"
+    },
+    {
+      "name": "accountApi-Dj_xcW6z.js",
+      "bytes": 5344,
+      "sha256": "85b8ca60312115a6bdaafb434370d999dd13209daefa75b37dcf337ed8aa1f26",
+      "status": "new"
+    },
+    {
+      "name": "aimMode-DOWPhyRb.js",
+      "bytes": 337,
+      "sha256": "014c20f151063b050b3b578dadec22af75004f28dc6412e36b2f351a1207ea26",
+      "status": "new"
+    },
+    {
+      "name": "announceAudio-IrDSxr0x.js",
+      "bytes": 2463,
+      "sha256": "cbf0d7988953b88838139495c78c40230efabe252805f4addf8046edf8f3b0d6",
+      "status": "new"
+    },
+    {
+      "name": "announcementBanner-CTl9P96j.css",
+      "bytes": 7917,
+      "sha256": "cb9add77f7a75f7c78daf49e75cce0d78a170589c20a46786210a8c97d80d1f1",
+      "status": "new"
+    },
+    {
+      "name": "announcementBanner-CklEt3EG.js",
+      "bytes": 124924,
+      "sha256": "290d7ae96401e00c89bf3412e2ece44eba7d0b533126e0d87b9e033aba99adb5",
+      "status": "new"
+    },
+    {
+      "name": "app-BEvYP3w8.css",
+      "bytes": 63212,
+      "sha256": "10df0b9bff9df3fbd70a1fb13b1caa8083a01f2815af01464d02f5e26ac293ef",
+      "status": "new"
+    },
+    {
+      "name": "app-CcRnB4rt.css",
+      "bytes": 40015,
+      "sha256": "4282b200374009f1251c2063ad54f6c97a4a6a5f4d4f49c890f11bc528dac6f7",
+      "status": "new"
+    },
+    {
+      "name": "app-D6M8HhqJ.js",
+      "bytes": 231411,
+      "sha256": "7f40f210bd9d9606b52cbed56d2ddcf97d8fc087571829885d31c6004f896a5e",
+      "status": "new"
+    },
+    {
+      "name": "app-DRRwuN67.js",
+      "bytes": 153832,
+      "sha256": "c38076d1525c17a57418c74c55fd42acdec6bf14e8b1708f3d4fa7076c2d3922",
+      "status": "new"
+    },
+    {
+      "name": "assetMap-BOyw80vP.js",
+      "bytes": 11066,
+      "sha256": "ad0b194376adbbdb249c8d576253a212ffae3fa8c6d83e41675157583563a8f6",
+      "status": "new"
+    },
+    {
+      "name": "assets-BGOLSToY.js",
+      "bytes": 18356,
+      "sha256": "46b8aa8181e3be35509a23679620b2e2a1e4dc783217ff21c96f109ec2880141",
+      "status": "new"
+    },
+    {
+      "name": "assets-DDkStGMg.css",
+      "bytes": 563,
+      "sha256": "f0154bc009c4e3a698fbb33f9e70d774afd1fe3d04f69ec4efda924e5741b1a3",
+      "status": "new"
+    },
+    {
+      "name": "audio-PJCbtNqy.js",
+      "bytes": 54745,
+      "sha256": "8cda38939a1bbe3c64d2fe7ba1da98bbea68c50a1964961b612fdbc2ab89bf16",
+      "status": "new"
+    },
+    {
+      "name": "audioUnlock-BF-uAbtv.js",
+      "bytes": 311,
+      "sha256": "09c1d3c12be61e99fe9e70ea06ff1ee09e8f6ea28731bd8203ef22c436fa5d0e",
+      "status": "new"
+    },
+    {
+      "name": "avatarCombat-3ZeXx7J2.js",
+      "bytes": 4140,
+      "sha256": "47c41ee238c10635082e10b74d51ce037111b54e0379b6f3c3b6de763d870be8",
+      "status": "new"
+    },
+    {
+      "name": "battleLineup-BQa6G89Q.js",
+      "bytes": 10368,
+      "sha256": "77f8f30a190d81d4c199545df4dd80eaaaf86fcf348fc39c97bd9d64a0e2850f",
+      "status": "new"
+    },
+    {
+      "name": "battleLoading-BKrK1SzW.js",
+      "bytes": 13204,
+      "sha256": "896118c70aca5769e4387ba3b3d50f76fb8603b0bf7a8c924357432e579bb055",
+      "status": "new"
+    },
+    {
+      "name": "battleLoading-gUstVxnC.css",
+      "bytes": 7047,
+      "sha256": "5d137ebb5f66ecbe92f5d15cd7bec52f976c97e543e0fcf18a8023e7ac27bcc1",
+      "status": "new"
+    },
+    {
+      "name": "battleLoadingRoster-BjYa_t3z.js",
+      "bytes": 423,
+      "sha256": "613e8cca57ad4486fb750f66935319cc990cea2bdece426e1e8743e442a033bd",
+      "status": "new"
+    },
+    {
+      "name": "boot-Dwa-JgDx.css",
+      "bytes": 15094,
+      "sha256": "b4ef5305c4dd39484422a617533d586e61f9a2edc0010744ead10986630e549f",
+      "status": "new"
+    },
+    {
+      "name": "boot-ijlP9Tgj.js",
+      "bytes": 91669,
+      "sha256": "bcb1211822b01bbb3a4e4c4dc31f644e8af2b65fa684bc55d2216d23413ee0cb",
+      "status": "new"
+    },
+    {
+      "name": "browserId-B6qIpZuE.js",
+      "bytes": 818,
+      "sha256": "1aa6a1000118835aa7604eb049eb873c137d12d80d112cacba6af032f95b8242",
+      "status": "new"
+    },
+    {
+      "name": "channels-CIPZFDYz.js",
+      "bytes": 529,
+      "sha256": "d89bb29354c3991f4d28a9d74368841c561150c09c4f5eb452f6e5483499462c",
+      "status": "new"
+    },
+    {
+      "name": "charAnimLib-WlaX7Brc.js",
+      "bytes": 4517,
+      "sha256": "5ace343e6a350298e5ec070cc9ef8ba9b0a621461aaee1c63f4605aa561b7788",
+      "status": "new"
+    },
+    {
+      "name": "clanMarkView-CS5A0cW1.js",
+      "bytes": 35540,
+      "sha256": "f79ce8404db708a55922b65a476643d6223d2929e3156981166979fdedb83ab9",
+      "status": "new"
+    },
+    {
+      "name": "classicOptionWindow-C1xkmHYp.js",
+      "bytes": 22821,
+      "sha256": "c632c0644dd50bb6917e18a77c820362dab668640a39b3aaa450b299dc13902a",
+      "status": "new"
+    },
+    {
+      "name": "clipStore-CEGzlnX5.js",
+      "bytes": 2122,
+      "sha256": "50130edcfe053c203cfc1a015359bc1ee23d9f7153628f20c1f1c0fce5187a84",
+      "status": "new"
+    },
+    {
+      "name": "collisionGroups-DWLcmsjy.js",
+      "bytes": 149,
+      "sha256": "1609a6bf5e2736e4c04765643331dcfd539bb9305bac50e440379b9f462161db",
+      "status": "new"
+    },
+    {
+      "name": "combatProtocol-CdPtySQA.js",
+      "bytes": 842,
+      "sha256": "5d3072eb6b3faa572e3a671849f3d8a52b94530f65d0ed11f0f64c219fa9244c",
+      "status": "new"
+    },
+    {
+      "name": "combatStatusModel-DdkUox9B.js",
+      "bytes": 718,
+      "sha256": "ef6059c8f52e5ba5bc8b945b262b2266b3dabaea76661d3a713b01587c963863",
+      "status": "new"
+    },
+    {
+      "name": "compressedTex-B-XwdJp4.js",
+      "bytes": 10890,
+      "sha256": "c6f92eae0b3a8dc101f16d06e7930e3bb86feb25ffad3583fd5e9764c6d2cc71",
+      "status": "new"
+    },
+    {
+      "name": "config-nNOdM9Tc.js",
+      "bytes": 2895,
+      "sha256": "57333ac963abf616879786311e9edc2317df8e6ca970b4a01cd77c6d7d8f86d6",
+      "status": "new"
+    },
+    {
+      "name": "data-C1Nw3PjD.js",
+      "bytes": 11775,
+      "sha256": "cc043be730871e78f1ea5bdff4214104af57519b467d2d26259dbbb9acae517f",
+      "status": "new"
+    },
+    {
+      "name": "deviceProfile-BbMjcetF.js",
+      "bytes": 1037,
+      "sha256": "e64308ccfde613f015f0d45205eaff21433cff9ce0abd20e2de826ab314abf76",
+      "status": "new"
+    },
+    {
+      "name": "drawingBuffer-D9m5P6LC.css",
+      "bytes": 2304,
+      "sha256": "36cfd855981e8d4f3c51f766732c449f3a22138778b01bf5e193f80d26a5f60e",
+      "status": "new"
+    },
+    {
+      "name": "drawingBuffer-DO7mtVhp.js",
+      "bytes": 22840,
+      "sha256": "e1c650eb2499364a84c5c66143fd45271a17add0e46e1b321920247504351ec6",
+      "status": "new"
+    },
+    {
+      "name": "exports-D2kE0KDf.js",
+      "bytes": 136989,
+      "sha256": "ce515c397a6bcba1b27611b19b89ad0061868fde0b92e9b878fba1fe21fce28d",
+      "status": "new"
+    },
+    {
+      "name": "i18n-CvOmwoyn.js",
+      "bytes": 25033,
+      "sha256": "5b39c7dce13d0c432eb6a4cc8be449d0e835ed6c8bfe6533fef899ede43878d3",
+      "status": "new"
+    },
+    {
+      "name": "i3Gui-BHt-NOq4.css",
+      "bytes": 18155,
+      "sha256": "516b3dddc55216963804b933cf3e047319a30e2397aa602c7518d461ef89efbf",
+      "status": "new"
+    },
+    {
+      "name": "i3Gui-D6QfmsSK.js",
+      "bytes": 26842,
+      "sha256": "6690572afe69e24ac1175979599ee75991365f861af679b05914645d99f81279",
+      "status": "new"
+    },
+    {
+      "name": "index-DxpkJc0_.js",
+      "bytes": 8741,
+      "sha256": "de978e7d25b1f7265464a62f4138a470bc5082601fa626944390a8116003d7e5",
+      "status": "new"
+    },
+    {
+      "name": "jsonOnce-DC7mlCFI.js",
+      "bytes": 1309,
+      "sha256": "5c9cacffd219939f66807e77d1f073e4a15fa9548509f259fa49e70ac0b7875e",
+      "status": "new"
+    },
+    {
+      "name": "knifeThrow-CohpjfBQ.js",
+      "bytes": 4715,
+      "sha256": "3f5d0966adf1823a8dd11306a894fef4045590f4eccab0105ae98e6def2db51a",
+      "status": "new"
+    },
+    {
+      "name": "ktx2-IMDepK3X.js",
+      "bytes": 4179,
+      "sha256": "2958984ccfbc848582ab18cfbe3f4686c1a75b261f80def7206136de48a896bf",
+      "status": "new"
+    },
+    {
+      "name": "language-CGImk_RO.js",
+      "bytes": 923,
+      "sha256": "d9100d2c5018f58494f95c81a20aa17f2f547996c0686f6d2d8a26c4746dac5e",
+      "status": "new"
+    },
+    {
+      "name": "levelCache-DSHcWUET.js",
+      "bytes": 3939,
+      "sha256": "0f3247f522c747b91dce8335e73c3c25cce163ef13de51f9a9dc64d2e74899aa",
+      "status": "new"
+    },
+    {
+      "name": "lightMatchTransport-CrKzuxUl.js",
+      "bytes": 8138,
+      "sha256": "853a5d2d72c73ab170f877b5661eb1dc9e866f1b721db9bc745da5c063146813",
+      "status": "new"
+    },
+    {
+      "name": "lockPointer-Bb1TKXqK.js",
+      "bytes": 582,
+      "sha256": "c1b53430c8d59e80f2a047a98da47598e1d70b1b48ff3505d146aaf27ca2a6aa",
+      "status": "new"
+    },
+    {
+      "name": "main-BdA4ev3C.js",
+      "bytes": 458707,
+      "sha256": "61bff0e3de9b03155d30d3443da0fd08002796271be94ebba14c25ca4174de25",
+      "status": "new"
+    },
+    {
+      "name": "main-ClDLtEDu.css",
+      "bytes": 16593,
+      "sha256": "b346bfa4169da1a0fc3fa03896812929f87e960e5efd7d6a3addc56922f0ed59",
+      "status": "new"
+    },
+    {
+      "name": "maintenance-oGso2NiD.js",
+      "bytes": 404,
+      "sha256": "235448faf91cae4fa7815d8b07a46e4a08c54f3e0aa3609f09493587516ff2e9",
+      "status": "new"
+    },
+    {
+      "name": "maintenanceNickname-BmBC5i7c.css",
+      "bytes": 81651,
+      "sha256": "610a15677e611f60fe4606a741ae844c687117a931dbe6c32887e7ed1408da31",
+      "status": "new"
+    },
+    {
+      "name": "maintenanceNickname-DYF63RGs.js",
+      "bytes": 303501,
+      "sha256": "bfa5fd136b8ab6d3bb16f1a0df9d2972fa951e8fddf3a0916b68078ddc8e9a69",
+      "status": "new"
+    },
+    {
+      "name": "mapProps-D_RKQAVz.js",
+      "bytes": 32908,
+      "sha256": "30636bc572213347cc4bcf07ce5ff0361b321484b8eb93abf937b7fe61b86059",
+      "status": "new"
+    },
+    {
+      "name": "matchHandles-DDRISjpa.js",
+      "bytes": 243,
+      "sha256": "b9913a23a31e634009a04f9d69085eafd5a02c3b44c22a75ce1e6e23a777f1e3",
+      "status": "new"
+    },
+    {
+      "name": "matchPage-BbZ33Rvd.js",
+      "bytes": 11371,
+      "sha256": "4b4e63736e21ddb77d7cc2b2eebb3283312363cfb60c0670f902ee6df83e7a61",
+      "status": "new"
+    },
+    {
+      "name": "modelVisibility-B2g7YL_s.js",
+      "bytes": 182,
+      "sha256": "ffffed466934ac4ce6d5197239a01c361acc96f445a1cf48aab33c844910b190",
+      "status": "new"
+    },
+    {
+      "name": "modulepreload-polyfill-B5Qt9EMX.js",
+      "bytes": 711,
+      "sha256": "d2a32840421496e872ade591618d2fa5c33797605d1aec04301717e5a90757d0",
+      "status": "new"
+    },
+    {
+      "name": "nameCard-C82M0xVt.js",
+      "bytes": 8668,
+      "sha256": "ba7ac043f54eb4562cab4f540f8a271889ba73f697f4d172ebb297b170104009",
+      "status": "new"
+    },
+    {
+      "name": "netAdapter-CWJUry-W.js",
+      "bytes": 228,
+      "sha256": "ba4956c228d7afa04cde056349d4d0b649382f30fde2f8b1890505b67fd17054",
+      "status": "new"
+    },
+    {
+      "name": "pageReturnCover-DEpTms8p.js",
+      "bytes": 1357,
+      "sha256": "b5cd06025812c982d42340f8c558cc5bbc7ecb96ab7130610157ae72a96beafb",
+      "status": "new"
+    },
+    {
+      "name": "pb-guard-DbU4Ge0q.js",
+      "bytes": 97838,
+      "sha256": "2a31bc9afbf7ad2771000708015ac9dec97e44cbfb63fc6b7c9360fb5822be6a",
+      "status": "new"
+    },
+    {
+      "name": "pbLighting-DChOykA0.js",
+      "bytes": 20785,
+      "sha256": "793ae972fd09255dc7714ba6c813958c5428be0e345bfd5e6931715d0026e616",
+      "status": "new"
+    },
+    {
+      "name": "pbmb-th-tactical-v4-xhxMEcCm.js",
+      "bytes": 67,
+      "sha256": "8f326f1eef43ee8d94da0fc00e713a931380e6137ad0be7f1e8ad2188b8b5c10",
+      "status": "new"
+    },
+    {
+      "name": "pcGuns-C2EjMTvP.js",
+      "bytes": 116,
+      "sha256": "cea95c2686e905e59fde1038139e4eef6e05687ae4032ba50b866ceffca33486",
+      "status": "new"
+    },
+    {
+      "name": "perfReport-Byg2MRtT.js",
+      "bytes": 53516,
+      "sha256": "62677dd574894346141c4423b6492337965af7c0851e2f32df3540d73440135d",
+      "status": "new"
+    },
+    {
+      "name": "perfReport-DKuEbNsg.css",
+      "bytes": 22318,
+      "sha256": "d6745c9c991e12d91af32258cd878a782ac266b9e971c5067f484079cd0c8b10",
+      "status": "new"
+    },
+    {
+      "name": "physicalInput-DUMrSTHm.js",
+      "bytes": 16415,
+      "sha256": "2f23f1af18f508392dc5d1da129abffb1aec80e6aefca1c6a85e870aea4e55dc",
+      "status": "new"
+    },
+    {
+      "name": "previewAssets-D-aYtFrP.js",
+      "bytes": 4957,
+      "sha256": "dd4f0abaf957dc0fb7aaae7346ac5f2391d21e81523de90bc96d00f1f2c383ee",
+      "status": "new"
+    },
+    {
+      "name": "previewWeapon-BcQimjg8.js",
+      "bytes": 1693,
+      "sha256": "989bee3f2b97fb1c3c2415a8f37e3b3089cdcbf7abbfd4a28b24d9a1e88f213b",
+      "status": "new"
+    },
+    {
+      "name": "propClip-BXQHECrT.js",
+      "bytes": 2995,
+      "sha256": "8cee436f6ebdc8430f26078b46b34db5844bf21ea212f78b0d56c7de22eb3a9e",
+      "status": "new"
+    },
+    {
+      "name": "qualityTier-DpZbaOaf.js",
+      "bytes": 3751,
+      "sha256": "9724bbbe8fbc4df126a1ada8024064e06fa97623fdae82eb5f68cd17bb526b92",
+      "status": "new"
+    },
+    {
+      "name": "rapier-BMzJ-4Oz.js",
+      "bytes": 1175,
+      "sha256": "ad8ded628ff57d1f1af0cd9296e7ea040c00d60a7d23e4d05b67f128a2f29f07",
+      "status": "new"
+    },
+    {
+      "name": "rapier-C7pzaElP.js",
+      "bytes": 2617,
+      "sha256": "af0092395fa08239f5f0ab87aefc59c819a6e42cdeb6891511fda0293c288c0b",
+      "status": "new"
+    },
+    {
+      "name": "rendererListeners-DFtTtNBW.js",
+      "bytes": 1118,
+      "sha256": "d13fdadcc2fecf0a036f3cd32d5e4167006d3bd3d0c9d8f79e6f04f873357e46",
+      "status": "new"
+    },
+    {
+      "name": "reportPopup-dxvLbDuo.js",
+      "bytes": 18146,
+      "sha256": "a2f083aaf5faa4f81d240330231148b273599c5012e1337964826761bd6710bc",
+      "status": "new"
+    },
+    {
+      "name": "respawnSelect-C55x-_zU.js",
+      "bytes": 38819,
+      "sha256": "175e06b5b9e35633d5bf1b921eea8301f664ce5d27a0ef7e1b35138266fcf7cf",
+      "status": "new"
+    },
+    {
+      "name": "roomClient-GPuMllX-.js",
+      "bytes": 49451,
+      "sha256": "44edf857bca53586beccbfb69e0a27e548c5f591ba120f8bf7eef2c7f1d404d9",
+      "status": "new"
+    },
+    {
+      "name": "roomInputDevice-fjbQxZEY.js",
+      "bytes": 16328,
+      "sha256": "1e95404cd69cacd655cb1f66a41e442cab4665606976bbe3f8ae482d1a1128fd",
+      "status": "new"
+    },
+    {
+      "name": "roomSlotButtons-DrM79IhU.js",
+      "bytes": 794,
+      "sha256": "ada869a35031bf2ad963ad8f56c74c67b0677fb8e039e013321b297846789eb8",
+      "status": "new"
+    },
+    {
+      "name": "services-CvquaBND.js",
+      "bytes": 5357,
+      "sha256": "015b4f0c8a76a7f34f0c4610e21bd60ed945e0c78e70d250315951680aa91894",
+      "status": "new"
+    },
+    {
+      "name": "session-DRJyreYx.js",
+      "bytes": 26993,
+      "sha256": "f361bbc5c27b329cc00e519472edfa2106c1fc47b533d2976d347aded11767ab",
+      "status": "new"
+    },
+    {
+      "name": "settings-KiEmyUCV.js",
+      "bytes": 17094,
+      "sha256": "90cd69155555caee976f77c2e5f299343da2721e3d25696b910ddb7f422f97cc",
+      "status": "new"
+    },
+    {
+      "name": "sharedRenderer-C8qUeoL5.js",
+      "bytes": 3614,
+      "sha256": "b93d6c8583e21933ff99223febec686384283a6f5f5a215906b11fc12797cb92",
+      "status": "new"
+    },
+    {
+      "name": "soundMix-Dd8TDLZs.js",
+      "bytes": 77294,
+      "sha256": "e614f23a03b4d8137c93883240f011f0b04c59417e6c5c1e2b4888015eb031d7",
+      "status": "new"
+    },
+    {
+      "name": "startupRecovery-CMUnH2r2.js",
+      "bytes": 672,
+      "sha256": "100db0694c2530cb34366d3ddb6618993888221e7cd5394e8b208ec88b605db3",
+      "status": "new"
+    },
+    {
+      "name": "storage-D7jG1gzr.js",
+      "bytes": 19824,
+      "sha256": "5b6dcfe4233c1e5c7aadfce38391e87f1958cbb6058f07c81b879647f5d6383b",
+      "status": "new"
+    },
+    {
+      "name": "strings-DWgKipJu.js",
+      "bytes": 2907,
+      "sha256": "98543b22541ce3b34e2e02c5910b6ea55e4b345b6550482c9f3d21988afa507f",
+      "status": "new"
+    },
+    {
+      "name": "switch-B4AFZRxn.js",
+      "bytes": 867,
+      "sha256": "b5e5d89f446be96f1e296f9603bbecf5f5803ee428b2623dd4ad9a75c4ac780d",
+      "status": "new"
+    },
+    {
+      "name": "testBots-C8j6khB-.js",
+      "bytes": 2641,
+      "sha256": "5b9a2f86c69f3908bc30bc624c827760d2510eb96b777f47bedf738173103361",
+      "status": "new"
+    },
+    {
+      "name": "testLoadout-DM3RvpiS.js",
+      "bytes": 1487,
+      "sha256": "96c5dbdf647be2131332f840d23ee77c337b19f6cea03a01c12f1217e0be77ac",
+      "status": "new"
+    },
+    {
+      "name": "textureRecovery-Dg6Psx8U.js",
+      "bytes": 2914,
+      "sha256": "ab4d2dfdaa2e33a7087c468be10bd0f9d763d4482dcbab29eef003556569c143",
+      "status": "new"
+    },
+    {
+      "name": "throwables-Cg0sm85D.js",
+      "bytes": 22662,
+      "sha256": "f943cc8b2529618e2bc0b55ed0b9897fb093b1f41dd7e3c554c864a115c817b5",
+      "status": "new"
+    },
+    {
+      "name": "titleFx-DLdKNpS2.js",
+      "bytes": 21676,
+      "sha256": "5fe9ab343e8c040d80691da6ba6c1326b033dd2fa5b364850c6c2be8324086a4",
+      "status": "new"
+    },
+    {
+      "name": "touchControls---9iLv6M.js",
+      "bytes": 86007,
+      "sha256": "5dfc627bdcab79daacbb3465b7a622196b00dfcf651a4bacd14fbf8be4f04ec9",
+      "status": "new"
+    },
+    {
+      "name": "touchControls-wcMWJSr-.css",
+      "bytes": 1369,
+      "sha256": "db43d544956cd548a12072deac7fdfb0d1f5ce158e259fbda3034f26156c770f",
+      "status": "new"
+    },
+    {
+      "name": "touchDevice-DQjOECoS.js",
+      "bytes": 1162,
+      "sha256": "042f72314d5994ce2d85c49a7f70c9cb2b68adde821d439306b4ede992248ff9",
+      "status": "new"
+    },
+    {
+      "name": "types-DCeN3WoQ.js",
+      "bytes": 253,
+      "sha256": "b16d68ee3e3798b88de0dca4d2d1f20e027ed230e6b6288e33d7ab93b6f31363",
+      "status": "new"
+    },
+    {
+      "name": "uiClick-Bgzwjsl8.js",
+      "bytes": 11730,
+      "sha256": "f04a5a1cdb2e122e9d791c7519464017006f57749f7ce4444e7763ccf5404844",
+      "status": "new"
+    },
+    {
+      "name": "vendor-three-DP9E4hIN.js",
+      "bytes": 790926,
+      "sha256": "904c486e3ea72325676e6f947845f1adcc51ad44631ff7d31b2f40b37086af94",
+      "status": "new"
+    },
+    {
+      "name": "worldModel-C9onZmEI.js",
+      "bytes": 17049,
+      "sha256": "1e8f8d05ea6b23ab99851b6eee74c3c48013f7a62ce45cd86036644382858c53",
+      "status": "new"
+    }
+  ]
+}

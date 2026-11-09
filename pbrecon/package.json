@@ -1,0 +1,17 @@
+{
+  "name": "pbrecon",
+  "version": "1.0.0",
+  "description": "Point Blank Web / Mobile TH Client Reconnaissance & Analysis",
+  "type": "module",
+  "scripts": {
+    "refresh": "node refresh.mjs",
+    "refresh:check": "node refresh.mjs --check",
+    "guard": "node ../scripts/refresh-guard.mjs",
+    "guard:check": "node ../scripts/refresh-guard.mjs --check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0"
+  }
+}

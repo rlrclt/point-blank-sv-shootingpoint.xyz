@@ -1,0 +1,1 @@
+class t{mode="local";localId="local";sendState(){}sendHit(){}sendKill(){}onRemoteState(){return()=>{}}onRemoteHit(){return()=>{}}onRemoteKill(){return()=>{}}onRemoteLeave(){return()=>{}}dispose(){}}export{t as LocalNetAdapter};

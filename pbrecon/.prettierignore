@@ -1,0 +1,5 @@
+# Large static assets
+asset-map.json
+vendor-three-*.js
+node_modules/
+package-lock.json
