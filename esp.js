@@ -70,7 +70,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
   };
-  const VERSION = "v1.69";
+  const VERSION = "v1.70";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -245,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.69</span>
+      <span id="pbTitle">PB ESP v1.70</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -2159,6 +2159,35 @@
     aimState.part = _lastAimPart;
   }
 
+  /* Laser sight ถูกอัปเดตใน weapons.tick() ซึ่งเกิด "ก่อน" hook render ของเรา
+     พอ aimbot หมุนกล้องในเฟรมนี้ จุดเลเซอร์จึงยังคำนวณจากกล้องเฟรมก่อน →
+     เห็นจุด/ลำแสงส่ายหนีกลางจอเวลากล้องถูกโยกเร็ว
+     เรียก lazer.update() ซ้ำหลังอัปเดตกล้อง เพื่อให้ทิศ laser ตรงกับกล้องปัจจุบัน */
+  function refreshLaserRay(pb) {
+    const ws = weaponSystemOf(pb);
+    const la = ws && ws.laser;
+    if (!la || !la.active) return;
+    const def = ws.frameDef;
+    if (!def) return;
+    const dummy = ws.viewmodel ? ws.viewmodel.laserDummy : null;
+    const range = def.params && def.params.range !== undefined ? def.params.range : def.range;
+    const fired = (ws.time - (ws.lastShot ?? 0)) < 0.1;
+    try {
+      const ray = ws.aimRay();
+      la.update(dummy, ws.aiming, range, fired, ray);
+      /* Hip-fire: เกมยิง laser จากทิศของโมเดลปืน (ที่ส่ายตาม viewmodel) ไม่ใช่กล้อง
+         ตอน aimbot ล็อกเป้า ให้ยึดทิศกล้องแทนเพื่อให้จุดอยู่กลางจอ
+         แต่ถ้าปืนนั้นซ่อนจุดตอน aiming (Wu) ให้ย้อนกลับไปใช้พฤติกรรมเดิม */
+      if (!ws.aiming && la.enabled) {
+        const hadDot = !!(la.dot && la.dot.visible);
+        if (hadDot) {
+          la.update(dummy, true, range, fired, ray);
+          if (la.dot && !la.dot.visible) la.update(dummy, ws.aiming, range, fired, ray);
+        }
+      }
+    } catch (_) { }
+  }
+
   // ─── helper: วาด FOV circle ───
   function drawFovCircle(cam) {
     const cx = cv.width / 2, cy = cv.height / 2;
@@ -3572,6 +3601,7 @@
         if (typeof fn !== "number" || fn !== _lastAimFrame) {
           _lastAimFrame = fn;
           aimAssistTick(pbNow, camera);
+          if (CFG.aimAssist && aimState.lockAim) refreshLaserRay(pbNow);
           fastSwapTick(pbNow);
           bonusTick(pbNow);
         }
@@ -3619,7 +3649,10 @@
     if (synced) return;
     const pb = findPB();
     const cam = pb?.player?.camera;
-    if (pb && cam) aimAssistTick(pb, cam);
+    if (pb && cam) {
+      aimAssistTick(pb, cam);
+      if (CFG.aimAssist && aimState.lockAim) refreshLaserRay(pb);
+    }
     if (pb) { fastSwapTick(pb); bonusTick(pb); }
       drawOnce(pb?.scene, cam);
   })();
