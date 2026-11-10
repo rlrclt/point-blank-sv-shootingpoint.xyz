@@ -70,7 +70,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
   };
-  const VERSION = "v1.66";
+  const VERSION = "v1.68";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -245,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.66</span>
+      <span id="pbTitle">PB ESP v1.68</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -337,6 +337,7 @@
         <label>FOV <span id="pbFovVal">${CFG.aimFov}</span>°
           <input type="range" id="pbFovSlider" min="1" max="180" step="1" value="${CFG.aimFov}">
         </label>
+        <div class="pbHelp">FOV เป็นขนาดบนจอ — ซูม/สโคปแล้ววงไม่ขยาย (อิง fov ปกติของกล้อง)</div>
         <label>Smooth <span id="pbSmVal">${CFG.aimSmooth}</span>
           <input type="range" id="pbSmSlider" min="1" max="20" step="0.5" value="${CFG.aimSmooth}">
         </label>
@@ -1977,6 +1978,29 @@
   }
 
   /* ---------- EVALUATE + TARGET SELECTION ---------- */
+  /* FOV อิง "ขนาดบนจอ" ไม่ใช่องศาโลก: ตอนซูมเข้าสโคป camera.fov จะเล็กลง
+     ถ้าใช้ FOV คงที่แบบองศา วงจะขยายกินพื้นที่จอมากขึ้นเรื่อย ๆ
+     → แปลง FOV ที่ตั้งไว้เป็นองศาที่สัมพันธ์กับ fov ปกติของกล้องตัวนั้น
+     เพื่อให้วง/รัศมีบนจอคงที่ทุกสถานะซูม ( unscoped = ค่าเดิม ) */
+  const aimBaseFovMap = new WeakMap();
+  function aimBaseFov(cam) {
+    const cf = Number(cam && cam.fov) || 0;
+    if (!cf) return 60;
+    const prev = aimBaseFovMap.get(cam) || 0;
+    const base = cf > prev ? cf : (prev || cf);
+    aimBaseFovMap.set(cam, base);
+    return base;
+  }
+  function aimEffFovRad(cam) {
+    if (CFG.aimFov >= 175) return Math.PI;
+    const deg = Math.min(179, CFG.aimFov);
+    const cf = Number(cam && cam.fov) || 0;
+    if (!cf) return deg * DEG;
+    const base = aimBaseFov(cam);
+    const ratio = Math.tan(deg * DEG / 2) / Math.tan(base * DEG / 2);
+    return Math.min(Math.PI, 2 * Math.atan(ratio * Math.tan(cf * DEG / 2)));
+  }
+
   function scoreOf(angles, a) {
     if (CFG.aimPriority === "dist") return angles.dist;
     if (CFG.aimPriority === "hp") return (a.hp ?? 100) * 1000 + angles.angTotal;
@@ -2051,7 +2075,7 @@
     if (!pb?.me?.alive) return;
     if (CFG.aimOnHold && !holdPressed()) return;
 
-    const fovRad = CFG.aimFov * Math.PI / 180;
+    const fovRad = aimEffFovRad(cam);
     const lockFov = fovRad * 1.25;
     let target = null;
 
@@ -2126,8 +2150,9 @@
     const cx = cv.width / 2, cy = cv.height / 2;
     // คำนวณ fovPx: ถ้า fov = 180 = ทั้งครึ่งหน้า ให้ไม่วาด (ไม่มีประโยชน์)
     if (CFG.aimFov >= 175) return;
-    const fovPx = Math.tan((CFG.aimFov * Math.PI / 180) / 2) /
-      Math.tan(((cam.fov ?? 60) * Math.PI / 180) / 2) *
+    const baseFov = aimBaseFov(cam);
+    const fovPx = Math.tan(Math.min(179, CFG.aimFov) * DEG / 2) /
+      Math.tan(baseFov * DEG / 2) *
       (cv.height / 2);
     ctx.save();
     ctx.globalAlpha = CFG.aimMode === "bot" ? 0.5 : 0.35;
