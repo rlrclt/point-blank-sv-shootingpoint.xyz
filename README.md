@@ -109,6 +109,17 @@ scripts\brave-fps.cmd          # vsync ON  → ภาพเนียน ไม�
 scripts\brave-fps-nosync.cmd   # vsync OFF → FPS เกิน refresh ได้ แต่มี tearing
 ```
 
+ตัวช่วยเปิด Chrome (ประสิทธิภาพดีสุด — เครื่องนี้ตรวจแล้วใช้ ANGLE D3D11 บน GTX 1050 Ti):
+
+```powershell
+scripts\chrome-fps.cmd
+```
+
+- ไม่ปิด vsync (กันภาพฉีก)
+- ลดการ throttle ตอนหน้าต่างไม่ focus / ถูกบัง
+- Chrome 137+ ไม่รับ `--load-extension` → ต้องโหลด extension เองครั้งเดียว
+  (`chrome://extensions` → Developer mode → Load unpacked → `pb-esp-ext-cf`)
+
 ## ฟีเจอร์ย่อ
 
 | ฟีเจอร์ | ที่ตั้งค่า |
