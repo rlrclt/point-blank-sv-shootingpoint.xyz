@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>Zombie Slayer — Straw Hat skin (three.js)</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #0a0c10; overflow: hidden; }
+  canvas { display: block; }
+  #hud {
+    position: fixed; left: 16px; bottom: 14px; pointer-events: none;
+    font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color: #ffd79a; opacity: .78; letter-spacing: .3px;
+  }
+  #hud b { color: #ffe9c4; font-weight: 600; }
+  #err {
+    position: fixed; inset: 0; display: none; place-items: center; padding: 24px;
+    font: 13px/1.7 ui-monospace, Consolas, monospace; color: #ffd7a8; text-align: center;
+    background: #0a0c10;
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <b>Zombie Slayer — Straw Hat</b><br />
+  ลากเพื่อหมุน · scroll เพื่อซูม
+</div>
+<div id="err"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OnePieceSkin, setupPirateStudio } from './three/onepieceSkin.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.28;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.01, 20);
+
+setupPirateStudio(renderer, scene);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 0.4;
+controls.maxDistance = 3.0;
+
+const skin = new OnePieceSkin({ basePath: './tex/sea3123_zombieslayer' });
+
+async function main() {
+  await skin.load();
+
+  const gltf = await new GLTFLoader().loadAsync('./zombie_slayer_onepiece.glb');
+  const model = gltf.scene;
+
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  const s = 1 / Math.max(size.x, size.y, size.z);
+  model.scale.setScalar(s);
+  model.position.sub(centre.multiplyScalar(s));
+
+  const pivot = new THREE.Group();
+  pivot.add(model);
+  scene.add(pivot);
+
+  skin.apply(model);
+  pivot.rotation.set(-0.12, -0.62, 0.10);
+
+  const radius = box.getSize(new THREE.Vector3()).length() * 0.5 * s;
+  const dir = new THREE.Vector3(0.35, 0.42, 1.0).normalize();
+  controls.target.set(0, 0, 0);
+  camera.position.copy(dir.multiplyScalar(radius * 2.3));
+  camera.near = radius * 0.05;
+  camera.far = radius * 40;
+  camera.updateProjectionMatrix();
+  controls.update();
+
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    renderer.render(scene, camera);
+  });
+
+  window.__op = { renderer, scene, camera, skin, controls, model };
+}
+
+main().catch((e) => {
+  console.error(e);
+  const el = document.getElementById('err');
+  el.style.display = 'grid';
+  el.innerHTML = `โหลดไม่สำเร็จ: ${e.message}<br><br>
+    ต้องเสิร์ฟผ่าน http · รัน <b>python -m http.server 8123</b> ในโฟลเดอร์ makeskin<br>
+    แล้วเปิด <b>http://localhost:8123/preview_onepiece.html</b>`;
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
