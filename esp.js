@@ -68,9 +68,9 @@
     allyColor: "#3fff3f", enemyColor: "#ff3030",
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
-    showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false,
+    showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
   };
-  const VERSION = "v1.68";
+  const VERSION = "v1.69";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -245,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.68</span>
+      <span id="pbTitle">PB ESP v1.69</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -263,6 +263,20 @@
       <div class="pbPane" data-pane="core">
         <div class="pbSec">ตัวนับ FPS</div>
         <label><input type="checkbox" data-c="unlockFps"> ปลดล็อก FPS (ถ้าเกม/เบราว์เซอร์รองรับ)</label>
+        <label>เพดานเฟรม
+          <select id="pbFpsCapSel">
+            <option value="auto">ตามจอ (auto)</option>
+            <option value="60">60</option>
+            <option value="75">75</option>
+            <option value="90">90</option>
+            <option value="120">120</option>
+            <option value="144">144</option>
+            <option value="165">165</option>
+            <option value="240">240</option>
+            <option value="0">ไม่จำกัด (0)</option>
+          </select>
+        </label>
+        <div class="pbHelp">เพดานเฟรมเขียนลง settings ของเกม · ตั้งเท่า refresh rate จอเพื่อลดอาการภาพฉีก (tearing)</div>
         <label><input type="checkbox" data-c="showFps"> แสดง FPS</label>
         <label>สไตล์ FPS <select id="pbFpsStyle"><option value="plain">เรียบ</option><option value="box">กล่อง</option><option value="neon">นีออน</option></select></label>
         <label><input type="checkbox" data-c="fpsLabel"> แสดงคำว่า FPS</label>
@@ -726,7 +740,7 @@
         applyFpsUnlock();
         try {
           setStatus(c.checked
-            ? "unlock FPS: ตั้ง Unlimited แล้ว — กด F5 (ถ้ายัง 75 = จอล็อก 75Hz)"
+            ? `unlock FPS: ตั้ง cap = ${capForMode() || 0} แล้ว — กด F5`
             : "unlock FPS: ปิด (ไม่แก้ค่าที่เกมบันทึกไว้)");
         } catch (_) { }
       }
@@ -3034,6 +3048,7 @@
   }
   function writeStoredFpsCap(cap) {
     let hit = false;
+    let changed = false;
     for (const k of FPS_SETTING_KEYS) {
       try {
         const raw = localStorage.getItem(k);
@@ -3043,30 +3058,86 @@
         if (Number(o.fpsCap) !== Number(cap)) {
           o.fpsCap = cap;
           localStorage.setItem(k, JSON.stringify(o));
+          changed = true;
         }
         hit = true;
       } catch (_) { }
     }
-    return hit;
+    return { hit, changed };
+  }
+  let detectedHz = 0;
+  let fpsNeedsReload = false;
+  function capForMode() {
+    const m = String(CFG.fpsCapMode || "auto");
+    if (m === "auto") return detectedHz ? Math.max(30, Math.round(detectedHz)) : 0;
+    const n = Number(m);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
   }
   function updateFpsInfo() {
     const el = panel.querySelector("#pbFpsInfo");
     if (!el) return;
     const info = readStoredFpsCap();
     const cap = info ? info.cap : 0;
+    const hz = detectedHz ? `จอ ≈ ${detectedHz} Hz` : "จอ: กำลังวัด…";
+    const capTxt = cap === 0 ? "Unlimited (0)" : String(cap);
+    const tear = cap === 0 ? " · 0 = เสี่ยง tearing ถ้าปิด vsync" : "";
     if (!CFG.unlockFps) {
-      el.textContent = `FPS setting: ${cap === 0 ? "Unlimited (0)" : cap}`;
+      el.textContent = `${hz} · cap = ${capTxt}${tear}`;
       return;
     }
-    el.textContent = cap === 0
-      ? "FPS setting: Unlimited — ถ้ายังไม่เกิน 75 แปลว่าจอ/เบราว์เซอร์ล็อกที่ refresh rate"
-      : `FPS setting: ${cap} → ตั้ง Unlimited แล้ว ต้องกด F5`;
+    const target = capForMode();
+    el.textContent = `${hz} · cap = ${capTxt}${tear}` +
+      (fpsNeedsReload ? ` → ตั้ง ${target} แล้ว กด F5` : "");
   }
   function applyFpsUnlock() {
-    if (CFG.unlockFps) writeStoredFpsCap(0);
+    if (CFG.unlockFps) {
+      if (String(CFG.fpsCapMode || "auto") === "auto" && !detectedHz) { updateFpsInfo(); return; }
+      const res = writeStoredFpsCap(capForMode());
+      if (res.changed) fpsNeedsReload = true;
+    }
     updateFpsInfo();
   }
+  function detectRefreshRate() {
+    let last = 0;
+    let start = 0;
+    const samples = [];
+    const finish = () => {
+      if (!samples.length) return;
+      samples.sort((a, b) => a - b);
+      const med = samples[samples.length >> 1] || 16.7;
+      const hz = Math.round(1000 / med);
+      if (hz >= 24 && hz <= 500) detectedHz = hz;
+      updateFpsInfo();
+      try { applyFpsUnlock(); } catch (_) { }
+    };
+    const tick = (t) => {
+      if (!start) start = t;
+      if (last > 0) {
+        const d = t - last;
+        if (d > 2 && d < 100) samples.push(d);
+      }
+      last = t;
+      const elapsed = t - start;
+      if (samples.length >= 90 || (elapsed > 1500 && samples.length >= 8)) { finish(); return; }
+      if (elapsed > 6000) { finish(); return; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  detectRefreshRate();
   applyFpsUnlock();
+  const fpsCapSel = panel.querySelector("#pbFpsCapSel");
+  if (fpsCapSel) {
+    fpsCapSel.value = String(CFG.fpsCapMode || "auto");
+    fpsCapSel.addEventListener("change", () => {
+      CFG.fpsCapMode = fpsCapSel.value;
+      saveCfg();
+      applyFpsUnlock();
+      try {
+        setStatus(`FPS cap: ${fpsCapSel.value === "auto" ? "ตามจอ" : fpsCapSel.value} — กด F5 หลังเปลี่ยนค่า`);
+      } catch (_) { }
+    });
+  }
 
   /* วาด "หลัง" renderer.render ของเกมพอดีทุกเฟรม — กล่องจะขยับพร้อมกล้องไม่มี lag
      (ไซต์ .th ไม่มีระบบตรวจ hook แบบ AC ของ .app จึงแนบปลอดภัย) */

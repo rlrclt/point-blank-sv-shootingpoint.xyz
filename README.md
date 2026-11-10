@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.68 · `manifest.json` 2.8.33
+- `esp.js` v1.69 · `manifest.json` 2.8.34
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -85,9 +85,15 @@ pb.settings.mobile.v1     (mobile spoof)
 
 `0` = Unlimited — render loop จะข้าม limiter ของเกม (`te.due()`)
 
-- เปิด **CORE → ปลดล็อก FPS** → เขียน `fpsCap = 0` ให้ทั้งสอง key
+- เปิด **CORE → ปลดล็อก FPS** → เขียน `fpsCap` ตาม **เพดานเฟรม** ที่เลือก
+- **เพดานเฟรม = ตามจอ (auto)** → วัด refresh rate จาก rAF แล้วตั้งให้เท่านั้น
+- เลือกเลขเองได้ (60/75/90/120/144/165/240) หรือ `0` = ไม่จำกัด
 - ต้อง **F5** หนึ่งครั้ง เพราะ settings module อ่านค่าตอน boot
-- แผงจะแสดง `FPS setting: ...` ใต้ checkbox
+- แผงจะแสดง `จอ ≈ N Hz · cap = ...` ใต้ checkbox
+
+> **อาการภาพฉีก/เส้นหยัก (`tearing`)** เกิดเมื่อเฟรมไม่ sync กับจอ:
+> `fpsCap = 0` + เปิด Brave ด้วย `--disable-gpu-vsync` → เฟรมวิ่งเร็วกว่า refresh
+> แก้โดยตั้งเพดานเฟรม = refresh rate ของจอ (เช่น 75/144/165) หรือปิด flag vsync
 
 > ถ้าตั้ง Unlimited แล้วยังได้ 75 แปลว่า **จอ 75Hz / rAF vsync lock** —
 > หน้าเว็บเดียวไปเกิน refresh rate ไม่ได้ ต้องเปิดเบราว์เซอร์ด้วย
