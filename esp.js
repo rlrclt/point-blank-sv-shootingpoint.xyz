@@ -43,6 +43,10 @@
     aimSmooth: 6.0,    // smoothness: ยิ่งสูง = กล้องเข้าหาเป้าเร็วขึ้น (1=นุ่มสุด, 20=เกือบ snap)
     aimBone: "head", // head | neck | chest | pelvis | hand | upperarm | forearm | thigh | shin | foot | auto
     aimBlock: [], // parts that must never be locked (head, body, hand, thigh, ...)
+    aimWeighted: false, // สุ่มจุดตาม % แทนจุดคงที่
+    aimWPreset: "auto", // auto | custom | rifle | sniper | shotgun | smg | mg | pistol
+    wHead: 22, wNeck: 6, wBody: 40, wUArm: 7, wFArm: 6, wHand: 3,
+    wThigh: 6, wShin: 7, wFoot: 3,
     aimVisibleOnly: true,   // ไม่ล็อคทะลุกำแพง (raycast จริง)
     fastSwap: false,        // เปลี่ยนปืนเร็ว
     swapMs: 250,            // เวลาเปลี่ยนปืนที่ต้องการ (ms) — default 250
@@ -70,8 +74,92 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
   };
-  const VERSION = "v1.71";
+  const VERSION = "v1.72";
   const DEG = Math.PI / 180;
+
+  /* ---------- weighted aim zones ----------
+     ล็อค 1 โซนต่อเป้า (ไม่ใช่ทุกเฟรม) เลือกด้วยน้ำหนัก % ของแต่ละจุด
+     โซนที่ติ๊ก "ห้ามล็อค" จะถูกตัดออกก่อนแล้วเกลี่ยน้ำหนักใหม่ */
+  const WPARTS = ["head", "neck", "body", "upperarm", "forearm", "hand", "thigh", "shin", "foot"];
+  const WKEY = {
+    head: "wHead", neck: "wNeck", body: "wBody", upperarm: "wUArm", forearm: "wFArm",
+    hand: "wHand", thigh: "wThigh", shin: "wShin", foot: "wFoot",
+  };
+  // WPARTS -> ชื่อโหมดที่ getAimPoint/MODE_ZONES รู้จัก ("body" ของ hitbox = ลำตัว)
+  const WMODE = {
+    head: "head", neck: "neck", body: "chest", upperarm: "upperarm", forearm: "forearm",
+    hand: "hand", thigh: "thigh", shin: "shin", foot: "foot",
+  };
+  const WEIGHT_PRESETS = {
+    rifle:   { head: 22, neck: 6, body: 40, upperarm: 7, forearm: 6, hand: 3, thigh: 6, shin: 7, foot: 3 },
+    sniper:  { head: 52, neck: 10, body: 27, upperarm: 4, forearm: 3, hand: 1, thigh: 1, shin: 1, foot: 1 },
+    shotgun: { head: 6, neck: 5, body: 54, upperarm: 8, forearm: 6, hand: 3, thigh: 10, shin: 6, foot: 2 },
+    smg:     { head: 15, neck: 5, body: 45, upperarm: 8, forearm: 6, hand: 4, thigh: 8, shin: 6, foot: 3 },
+    mg:      { head: 10, neck: 5, body: 50, upperarm: 8, forearm: 6, hand: 4, thigh: 8, shin: 6, foot: 3 },
+    pistol:  { head: 30, neck: 8, body: 34, upperarm: 6, forearm: 5, hand: 3, thigh: 6, shin: 5, foot: 3 },
+  };
+  function presetOfFamily(fam) {
+    const f = String(fam || "").toUpperCase();
+    if (f === "SR") return "sniper";
+    if (f === "SG") return "shotgun";
+    if (f === "SMG") return "smg";
+    if (f === "MG") return "mg";
+    if (f === "HG") return "pistol";
+    return "rifle";
+  }
+  function currentWeaponFamily(pb) {
+    try {
+      const ws = pb && typeof pb.pbWeapons === "function" ? pb.pbWeapons() : null;
+      const h = ws && typeof ws.getHudState === "function" ? ws.getHudState() : null;
+      if (h && h.family) return h.family;
+      const s = ws && Array.isArray(ws.slots) ? ws.slots[ws.cur] : null;
+      return (s && s.def && s.def.family) || "";
+    } catch (_) { return ""; }
+  }
+  function weightsFromCfg() {
+    const o = {};
+    for (const p of WPARTS) o[p] = Math.max(0, Number(CFG[WKEY[p]]) || 0);
+    return o;
+  }
+  function activeWeights(pb) {
+    const now = performance.now();
+    if (_wCache && now - _wCacheAt < 120) return _wCache;
+    const p = String(CFG.aimWPreset || "auto");
+    let w;
+    if (p === "custom") w = weightsFromCfg();
+    else if (p === "auto") w = WEIGHT_PRESETS[presetOfFamily(currentWeaponFamily(pb))] || WEIGHT_PRESETS.rifle;
+    else w = WEIGHT_PRESETS[p] || weightsFromCfg();
+    _wCache = w; _wCacheAt = now;
+    return w;
+  }
+  let _wCache = null, _wCacheAt = 0;
+  const _weightPick = new WeakMap();
+  function pickWeightedPart(pb, a) {
+    const w = activeWeights(pb);
+    const block = Array.isArray(CFG.aimBlock) ? CFG.aimBlock : [];
+    const list = [];
+    let total = 0;
+    for (const part of WPARTS) {
+      if (block.includes(part)) continue;
+      const v = Math.max(0, Number(w[part]) || 0);
+      if (v <= 0) continue;
+      list.push([part, v]);
+      total += v;
+    }
+    if (!list.length) return "body";
+    const sig = list.map((x) => x[0] + ":" + x[1]).join("|");
+    const now = performance.now();
+    const ce = a ? _weightPick.get(a) : null;
+    if (ce && ce.sig === sig && now - ce.t < 3500) return ce.part;
+    let r = Math.random() * total;
+    let part = list[list.length - 1][0];
+    for (const it of list) {
+      r -= it[1];
+      if (r <= 0) { part = it[0]; break; }
+    }
+    if (a) _weightPick.set(a, { part, t: now, sig });
+    return part;
+  }
 
   /* ---------- config persistence ---------- */
   const CFG_KEY = "pbEspCfg_v2";
@@ -245,7 +333,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.71</span>
+      <span id="pbTitle">PB ESP v1.72</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -387,6 +475,37 @@
             <option value="auto">Auto (อัจฉริยะ)</option>
           </select>
         </label>
+        <div class="pbSec">สุ่มจุดตาม %</div>
+        <label><input type="checkbox" data-c="aimWeighted"> ใช้ % สุ่มจุด (แทนจุดเล็งคงที่)</label>
+        <div class="pbHelp">สุ่ม 1 ครั้งต่อการล็อคเป้า แล้วล็อคโซนนั้นจนเปลี่ยนเป้า · โซนที่ติ๊ก "ห้ามล็อค" ถูกตัดออกก่อนเกลี่ย %</div>
+        <div class="pbHelp">auto = ใช้ preset ตามชนิดปืน (แก้ % ไม่ได้) · เลือก Preset อื่นหรือ "กำหนดเอง" เพื่อแก้ตัวเลข</div>
+        <label>Preset
+          <select id="pbWPreset">
+            <option value="auto">ตามชนิดปืน (auto)</option>
+            <option value="rifle">Rifle (AR)</option>
+            <option value="sniper">Sniper (SR)</option>
+            <option value="shotgun">Shotgun (SG)</option>
+            <option value="smg">SMG</option>
+            <option value="mg">MG</option>
+            <option value="pistol">Pistol (HG)</option>
+            <option value="custom">กำหนดเอง</option>
+          </select>
+        </label>
+        <div class="pbWGrid" id="pbWGrid">
+          <label class="pbW">หัว<input type="number" data-w="head" min="0" max="400" step="1"></label>
+          <label class="pbW">คอ<input type="number" data-w="neck" min="0" max="400" step="1"></label>
+          <label class="pbW">ลำตัว<input type="number" data-w="body" min="0" max="400" step="1"></label>
+          <label class="pbW">ต้นแขน<input type="number" data-w="upperarm" min="0" max="400" step="1"></label>
+          <label class="pbW">ปลายแขน<input type="number" data-w="forearm" min="0" max="400" step="1"></label>
+          <label class="pbW">มือ<input type="number" data-w="hand" min="0" max="400" step="1"></label>
+          <label class="pbW">ต้นขา<input type="number" data-w="thigh" min="0" max="400" step="1"></label>
+          <label class="pbW">น่อง<input type="number" data-w="shin" min="0" max="400" step="1"></label>
+          <label class="pbW">เท้า<input type="number" data-w="foot" min="0" max="400" step="1"></label>
+        </div>
+        <div class="pbRow">
+          <button id="pbWNorm" type="button">เกลี่ย 100%</button>
+          <span class="pbHelp" id="pbWSum" style="margin:0">—</span>
+        </div>
         <div class="pbSec">ห้ามล็อค</div>
         <div class="pbBlockGrid">
           <label><input type="checkbox" data-block="head"> หัว</label>
@@ -557,6 +676,12 @@
     #pbEspPanel #pbAimPresets button{padding:3px 4px;font-size:8.5px;letter-spacing:.2px;}
     #pbEspPanel .pbBlockGrid{display:grid;grid-template-columns:1fr 1fr 1fr;}
     #pbEspPanel .pbBlockGrid label{font-size:10px;padding:3px 8px;min-height:20px;}
+    #pbEspPanel .pbWGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;
+      padding:2px 8px 4px;}
+    #pbEspPanel .pbW{display:flex;align-items:center;justify-content:space-between;gap:4px;
+      padding:2px 6px;min-height:20px;border-bottom:0;background:#160d10;
+      border:1px solid #3a2227;border-radius:0;font-size:9.5px;color:#e7ced2;}
+    #pbEspPanel .pbW input[type=number]{width:42px;padding:1px 4px;font-size:9.5px;text-align:right;}
   `;
   document.head.appendChild(css);
   panel.id = "pbEspPanel";
@@ -1004,6 +1129,73 @@
   setBonus("bonusReload", CFG.bonusReload, false);
   setBonus("bonusSwap", CFG.bonusSwap, false);
 
+  /* ---------- weighted-aim UI ---------- */
+  const wPresetSel = panel.querySelector("#pbWPreset");
+  const wInputs = panel.querySelectorAll("#pbWGrid input[data-w]");
+  const wSumEl = panel.querySelector("#pbWSum");
+  const wNormBtn = panel.querySelector("#pbWNorm");
+  function syncWeightUI() {
+    if (!wInputs || !wInputs.length) return;
+    const preset = String(CFG.aimWPreset || "auto");
+    if (wPresetSel) wPresetSel.value = preset;
+    const auto = preset === "auto";
+    const src = auto ? WEIGHT_PRESETS.rifle
+      : (preset === "custom" ? weightsFromCfg() : (WEIGHT_PRESETS[preset] || weightsFromCfg()));
+    for (const inp of wInputs) inp.value = String(src[inp.dataset.w]);
+    const blocked = new Set(Array.isArray(CFG.aimBlock) ? CFG.aimBlock : []);
+    let total = 0;
+    for (const inp of wInputs) {
+      if (blocked.has(inp.dataset.w)) continue;
+      total += Math.max(0, Number(inp.value) || 0);
+    }
+    if (wSumEl) {
+      wSumEl.textContent = (auto ? "auto ตามปืน · " : "") + `รวม ${Math.round(total)}%`
+        + (blocked.size ? " · ตัดโซนห้ามล็อคแล้ว" : "");
+    }
+    const off = !CFG.aimAssist || !CFG.aimWeighted;
+    for (const inp of wInputs) inp.disabled = off || auto || blocked.has(inp.dataset.w);
+    if (wPresetSel) wPresetSel.disabled = off;
+    if (wNormBtn) wNormBtn.disabled = off || auto;
+  }
+  function applyWeightPreset(name) {
+    CFG.aimWPreset = name;
+    const w = WEIGHT_PRESETS[name];
+    if (w) {
+      for (const p of WPARTS) CFG[WKEY[p]] = w[p];
+    }
+    saveCfg();
+    syncWeightUI();
+  }
+  if (wPresetSel) wPresetSel.addEventListener("change", () => applyWeightPreset(wPresetSel.value));
+  for (const inp of wInputs) {
+    inp.addEventListener("change", () => {
+      const v = Math.max(0, Math.min(400, Math.round(Number(inp.value) || 0)));
+      CFG[WKEY[inp.dataset.w]] = v;
+      CFG.aimWPreset = "custom";
+      saveCfg();
+      syncWeightUI();
+    });
+  }
+  if (wNormBtn) wNormBtn.addEventListener("click", () => {
+    const blocked = new Set(Array.isArray(CFG.aimBlock) ? CFG.aimBlock : []);
+    let total = 0;
+    for (const p of WPARTS) if (!blocked.has(p)) total += Math.max(0, Number(CFG[WKEY[p]]) || 0);
+    if (total <= 0) return;
+    let acc = 0;
+    let bigPart = null, bigVal = -1;
+    for (const p of WPARTS) {
+      const v = blocked.has(p) ? 0 : Math.max(0, Number(CFG[WKEY[p]]) || 0);
+      const scaled = v > 0 ? Math.round((v / total) * 100) : 0;
+      CFG[WKEY[p]] = scaled;
+      acc += scaled;
+      if (scaled > bigVal) { bigVal = scaled; bigPart = p; }
+    }
+    if (bigPart && acc !== 100) CFG[WKEY[bigPart]] = Math.max(0, bigVal + (100 - acc));
+    CFG.aimWPreset = "custom";
+    saveCfg();
+    syncWeightUI();
+  });
+
   function syncDependentControls() {
     const dis = (sel, off) => {
       for (const el of panel.querySelectorAll(sel)) el.disabled = !!off;
@@ -1014,7 +1206,9 @@
     dis("#pbFpsStyle, input[data-c='fpsLabel']", !CFG.showFps);
     dis("#pbSwapSlider, #pbSwapNum, #pbSwapReset", !CFG.fastSwap);
     dis("#pbBonusSSlider, #pbBonusSNum, #pbBonusRSlider, #pbBonusRNum, #pbBonusReset, #pbSwapProfile, #pbReloadProfile", !CFG.statBonus);
-    dis("#pbFovSlider, #pbSmSlider, #pbPredSlider, #pbTrackSlider, #pbVisTol, #pbPrioSelect, #pbBoneSelect, #pbHoldBind, #pbAimPresets button", !CFG.aimAssist);
+    dis("#pbFovSlider, #pbSmSlider, #pbPredSlider, #pbTrackSlider, #pbVisTol, #pbPrioSelect, #pbHoldBind, #pbAimPresets button", !CFG.aimAssist);
+    dis("#pbBoneSelect", !CFG.aimAssist || CFG.aimWeighted);
+    try { syncWeightUI(); } catch (_) { }
   }
   syncDependentControls();
 
@@ -1031,6 +1225,7 @@
       else set.delete(cb.dataset.block);
       CFG.aimBlock = [...set];
       saveCfg();
+      try { syncWeightUI(); } catch (_) { }
     });
   }
   const holdBind = panel.querySelector("#pbHoldBind");
@@ -2047,7 +2242,8 @@
     const pos = [0, 0, 0];
     if (!posOfActor(a, pos)) return null;
     const aim = [0, 0, 0];
-    if (!getAimPoint(pb, cam, a, pos, CFG.aimBone, aim)) return null;
+    const aimMode = CFG.aimWeighted ? (WMODE[pickWeightedPart(pb, a)] || "chest") : CFG.aimBone;
+    if (!getAimPoint(pb, cam, a, pos, aimMode, aim)) return null;
     const aimed = [0, 0, 0];
     predictPoint(a, pos, aim, aimed);
     const angles = calcAnglesToTarget(cam, aimed, aimed[1], pb.player);

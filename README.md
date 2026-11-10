@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.71 · `manifest.json` 2.8.36
+- `esp.js` v1.72 · `manifest.json` 2.8.37
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -24,7 +24,7 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
 |---|---|
 | CORE | FPS counter, ปลดล็อก FPS, ปลอมเป็น Mobile |
 | COMBAT | NoRecoil, NoSpread, Humanize (ทิศขึ้น/ลง + ความแรง) |
-| AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค, laser ตามกล้องตอนล็อก |
+| AIM | aimbot, preset, จุดเล็งละเอียด (หัว/คอ/อก/เอว/มือ/แขน/ขา/เท้า), จุดห้ามล็อค, สุ่มจุด 9 โซนตาม %, laser ตามกล้องตอนล็อก |
 | ESP | overlay + สี/ความหนา/ระยะวาด/ขนาดชื่อ/แสดงเพื่อน |
 | WEAPON | fast swap, bonus swap/reload |
 | SAFETY | master switch, คีย์ลัด, bridge, Anti-Cheat, panic |
@@ -53,6 +53,19 @@ Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, a
   (ปิด Smart Zone เพื่อล็อคเฉพาะส่วนที่เลือกเท่านั้น)
 - **เผื่อสิ่งกีดขวาง** (0–0.35 m) = ยิงจุดรอบเป้าเพิ่มเมื่อ ray หลักชนขอบ/ราว
   ทำให้ล็อคผ่านช่องเล็ก ๆ ได้โดยไม่ทะลุกำแพงหนา
+
+### สุ่มจุดตาม % (9 โซน)
+
+- เปิด **AIM → ใช้ % สุ่มจุด** เพื่อแทนจุดเล็งคงที่
+- สุ่ม **1 ครั้งต่อการล็อคเป้า** แล้วล็อคโซนเดิมจนเปลี่ยนเป้า (ไม่กระพริบ)
+- น้ำหนัก 9 โซน: หัว / คอ / ลำตัว / ต้นแขน / ปลายแขน / มือ / ต้นขา / น่อง / เท้า
+- **sync กับ "ห้ามล็อค"**: โซนที่ติ๊กห้ามจะไม่ถูกสุ่ม และน้ำหนักที่เหลือถูกเกลี่ยใหม่
+- **Preset ต่อชนิดปืน**: `auto` = เลือกอัตโนมัติตาม family
+  (AR→rifle, SR→sniper, SG→shotgun, SMG, MG, HG→pistol)
+  หรือเลือกเอง / `กำหนดเอง` เพื่อแก้ตัวเลข
+- ปุ่ม **เกลี่ย 100%** ปรับน้ำหนักให้รวมเป็น 100
+- โซนที่ถูกสุ่มแล้วถูกบัง → fallback ตามลำดับ Smart Zone (ปิด Smart Zone
+  = ล็อคเฉพาะโซนที่สุ่มได้เท่านั้น)
 
 ## SPAWN — ปิดใช้งานแล้ว (v1.66)
 
