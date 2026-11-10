@@ -75,6 +75,8 @@ export class PirateSkin {
     const mat = this.createMaterial();
     root.traverse((obj) => {
       if (!obj.isMesh) return;
+      // the cloth hilt wrap keeps its own material from the glb
+      if (obj.name === 'HandleWrap' || (obj.material && obj.material.name === 'wrap_cloth')) return;
       const prev = obj.material;
       obj.material = mat;
       if (prev && prev.side !== undefined) mat.side = prev.side;
