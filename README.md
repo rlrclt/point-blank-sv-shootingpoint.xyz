@@ -2,7 +2,7 @@
 
 Extension เสริมสำหรับ `pbmobile-th.online` (ESP overlay, aim assist, no-recoil, no-spread, fast weapon swap, mobile bypass)
 
-- `esp.js` v1.70 · `manifest.json` 2.8.35
+- `esp.js` v1.71 · `manifest.json` 2.8.36
 - ติดตั้ง: `opera://extensions` (หรือ `chrome://extensions`) → Developer mode → Load unpacked → โฟลเดอร์นี้
 - เมนูในเกม: **Insert** ซ่อน/แสดง · **F7** aimbot · **F8** ESP · **F9** no-recoil · **F10** panic (ปิดทุกฟีเจอร์ + ซ่อนแผง)
 
@@ -90,6 +90,9 @@ pb.settings.mobile.v1     (mobile spoof)
 - เลือกเลขเองได้ (60/75/90/120/144/165/240) หรือ `0` = ไม่จำกัด
 - ต้อง **F5** หนึ่งครั้ง เพราะ settings module อ่านค่าตอน boot
 - แผงจะแสดง `จอ ≈ N Hz · cap = ...` ใต้ checkbox
+- ตัวเลข FPS บนจอจะขึ้นบรรทัดเตือนสีส้มเมื่อเจอ 2 อาการ:
+  - `FPS เกินจอ NHz` → ตั้งเพดานเฟรมให้เท่า refresh (หรือเปิด Brave แบบ vsync)
+  - `เฟรมไม่นิ่ง p95 … ms` → frame time กระตุกถึงแม้ FPS เฉลี่ยจะสูง
 
 > **อาการภาพฉีก/เส้นหยัก (`tearing`)** เกิดเมื่อเฟรมไม่ sync กับจอ:
 > `fpsCap = 0` + เปิด Brave ด้วย `--disable-gpu-vsync` → เฟรมวิ่งเร็วกว่า refresh

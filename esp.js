@@ -70,7 +70,7 @@
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
   };
-  const VERSION = "v1.70";
+  const VERSION = "v1.71";
   const DEG = Math.PI / 180;
 
   /* ---------- config persistence ---------- */
@@ -245,7 +245,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.70</span>
+      <span id="pbTitle">PB ESP v1.71</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -698,6 +698,28 @@
       fpsFrames = 0;
       fpsUpdatedAt = now;
     }
+  }
+  /* ── frame pacing: rAF = จังหวะที่ compositor วาดจริง
+     ตัวเลข FPS ของเกมบอก "throughput" แต่ไม่ได้บอกว่าเฟรมมาไม่สม่ำเสมอ
+     เก็บช่วงเวลา 180 เฟรมล่าสุด → median / p95 ใช้ฟันธงอาการกระตุก ── */
+  const rafDeltas = [];
+  let _lastRafT = 0;
+  function sampleRaf(t) {
+    if (_lastRafT > 0) {
+      const d = t - _lastRafT;
+      if (d > 0 && d < 250) {
+        rafDeltas.push(d);
+        if (rafDeltas.length > 180) rafDeltas.shift();
+      }
+    }
+    _lastRafT = t;
+  }
+  function rafStats() {
+    if (rafDeltas.length < 20) return null;
+    const a = rafDeltas.slice().sort((x, y) => x - y);
+    const med = a[a.length >> 1] || 16.7;
+    const p95 = a[Math.min(a.length - 1, Math.floor(a.length * 0.95))] || med;
+    return { hz: Math.round(1000 / med), med, p95 };
   }
   function hookGameFpsCounter() {
     const hud = findPB()?.hud;
@@ -2845,18 +2867,37 @@
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (CFG.showFps) {
       const dpr = devicePixelRatio || 1, text = `${fpsValue}${CFG.fpsLabel ? " FPS" : ""}`;
+      const rs = rafStats();
+      let detail = "";
+      if (rs) {
+        if (fpsValue > rs.hz * 1.15) detail = `FPS เกินจอ ${rs.hz}Hz → ตั้ง cap = ${rs.hz}`;
+        else if (rs.p95 > Math.max(rs.med * 1.5, rs.med + 4)) detail = `เฟรมไม่นิ่ง p95 ${rs.p95.toFixed(1)}ms · จอ ${rs.hz}Hz`;
+      }
+      const detailColor = "#ffb020";
       ctx.save();
       ctx.font = `700 ${14 * dpr}px 'Segoe UI', sans-serif`;
       ctx.textBaseline = "top";
       if (CFG.fpsStyle === "box") {
         const w = ctx.measureText(text).width;
-        ctx.fillStyle = "rgba(10,15,20,.78)"; ctx.fillRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
-        ctx.strokeStyle = "#ff4d5a"; ctx.strokeRect(12 * dpr, 12 * dpr, w + 16 * dpr, 28 * dpr);
+        const hTot = 28 + (detail ? 15 : 0);
+        ctx.fillStyle = "rgba(10,15,20,.78)"; ctx.fillRect(12 * dpr, 12 * dpr, w + 16 * dpr, hTot * dpr);
+        ctx.strokeStyle = detail ? detailColor : "#ff4d5a"; ctx.strokeRect(12 * dpr, 12 * dpr, w + 16 * dpr, hTot * dpr);
         ctx.fillStyle = "#fff"; ctx.fillText(text, 20 * dpr, 18 * dpr);
+        if (detail) {
+          ctx.font = `600 ${10.5 * dpr}px 'Segoe UI', sans-serif`;
+          ctx.fillStyle = detailColor;
+          ctx.fillText(detail, 20 * dpr, 36 * dpr);
+        }
       } else {
         ctx.fillStyle = CFG.fpsStyle === "neon" ? "#42ffb0" : "#fff";
         if (CFG.fpsStyle === "neon") { ctx.shadowColor = "#42ffb0"; ctx.shadowBlur = 10 * dpr; }
         ctx.fillText(text, 14 * dpr, 14 * dpr);
+        if (detail) {
+          ctx.font = `600 ${10.5 * dpr}px 'Segoe UI', sans-serif`;
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = detailColor;
+          ctx.fillText(detail, 14 * dpr, 32 * dpr);
+        }
       }
       ctx.restore();
     }
@@ -3646,6 +3687,7 @@
   // โหมดสำรอง: ก่อน hook ติด ยังวาดจาก rAF ของตัวเอง (สถานะจะบอก "โหมดรอ")
   (function fallbackLoop() {
     requestAnimationFrame(fallbackLoop);
+    sampleRaf(performance.now());
     if (synced) return;
     const pb = findPB();
     const cam = pb?.player?.camera;
