@@ -99,11 +99,12 @@ pb.settings.mobile.v1     (mobile spoof)
 > หน้าเว็บเดียวไปเกิน refresh rate ไม่ได้ ต้องเปิดเบราว์เซอร์ด้วย
 > `--disable-gpu-vsync --disable-frame-rate-limit`
 
-ตัวช่วยเปิด Brave:
+ตัวช่วยเปิด Brave (ปิด Brave ให้หมดก่อน — flag มีผลเฉพาะ process ใหม่):
+
 ```powershell
-scripts\brave-fps.cmd
+scripts\brave-fps.cmd          # vsync ON  → ภาพเนียน ไม่มี tearing (แนะนำ)
+scripts\brave-fps-nosync.cmd   # vsync OFF → FPS เกิน refresh ได้ แต่มี tearing
 ```
-ปิด Brave ให้หมดก่อน (flag มีผลเฉพาะ process ใหม่) — จะมี tearing/GPU สูงขึ้น
 
 ## ฟีเจอร์ย่อ
 

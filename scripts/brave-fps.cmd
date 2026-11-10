@@ -1,11 +1,14 @@
 @echo off
 rem ---------------------------------------------------------------------------
-rem  Launch Brave with the vsync / frame limiter disabled.
+rem  Launch Brave normally (vsync ON) for the PB ESP workflow.
 rem
-rem  The game can only remove ITS OWN cap (settings -> FPS limit: Unlimited).
-rem  requestAnimationFrame still follows the monitor refresh rate, so on a
-rem  75 Hz display the page stays at 75 even with the game cap removed.
-rem  These flags let Chromium produce frames faster than the display refresh.
+rem  Why: the game can remove ITS OWN FPS cap (CORE -> เพดานเฟรม = ตามจอ / 144 ...),
+rem  but Chromium's rAF is still paced by the display. Running the browser with
+rem  --disable-gpu-vsync lets frames outrun the display -> visible tearing
+rem  (เส้นหยัก/ภาพฉีก). This script keeps vsync so the picture stays clean.
+rem
+rem  Want frames above the refresh rate anyway? Use brave-fps-nosync.cmd
+rem  (same flags as before, tearing possible).
 rem
 rem  IMPORTANT: close every Brave window first. Flags only apply to a new
 rem  browser process; an already running Brave ignores them.
@@ -24,6 +27,6 @@ if not defined EXE (
   exit /b 1
 )
 
-echo Launching: %EXE%
-start "" "%EXE%" --disable-gpu-vsync --disable-frame-rate-limit --max-gum-fps=9999
+echo Launching (vsync ON, no tearing): %EXE%
+start "" "%EXE%"
 endlocal
