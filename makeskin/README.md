@@ -60,3 +60,20 @@ python -m http.server 8123
 วิธีเก็บ: เปิด Brave ด้วย `--remote-debugging-port=9222` → เข้าแมตช์ →
 อ่าน `performance.getEntriesByType('resource')` ที่ลงท้าย `.glb`
 แล้วทำ redirect (extension/CDP) ไปที่ไฟล์ localhost
+
+## บทเรียนสำคัญ: ชิ้นส่วนเสริมต้องอยู่ใต้ dummy
+
+เกม merge เฉพาะ mesh ที่อยู่ใต้ `GunDummy → WholeAniDummy` ของปืน
+ถ้าเอาดาบ/เรือ/พร็อพไปวางเป็น **พี่น้องของ GunDummy** (ลูกของ `AxisRotate`)
+mesh เหล่านั้นจะค้างอยู่อีก root ที่ transform ไม่ตรง → ตำแหน่ง/ขนาดเพี้ยนในเกม
+
+แก้: parent ใต้ `WholeAniDummy` (Keep Transform) + `Ctrl+A → All Transforms`
+(โดยเฉพาะ scale ติดลบ/ไม่เท่ากัน) แล้ว export ใหม่
+
+`patch_parent.mjs` ใช้ย้าย parent ในไฟล์ .glb โดยรักษา world transform
+(สำหรับทดสอบเร็ว ๆ ก่อนแก้ใน Blender):
+
+```powershell
+node patch_parent.mjs in.glb out_fixed.glb KatanaTsuba ShipRaw ZoroKatana
+```
+
