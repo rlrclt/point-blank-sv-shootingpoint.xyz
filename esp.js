@@ -73,8 +73,9 @@
     deadAlpha: 0.35, eyeStand: 1.85, eyeCrouch: 1.05,
     espThickness: 2, espMaxDist: 200, espNameSize: 13,
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
+    sharpWeaponTex: false,
   };
-  const VERSION = "v1.72";
+  const VERSION = "v1.73";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -333,7 +334,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.72</span>
+      <span id="pbTitle">PB ESP v1.73</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -371,6 +372,9 @@
         <div class="pbHelp" id="pbFpsInfo">FPS setting: —</div>
         <div class="pbSec">มือถือ / Spoof</div>
         <label><input type="checkbox" data-c="fakeMobile"> ปลอมเป็น Mobile</label>
+        <div class="pbSec">ภาพ</div>
+        <label><input type="checkbox" data-c="sharpWeaponTex"> คม texture ปืน (anisotropy)</label>
+        <div class="pbHelp">ตั้ง anisotropic filtering สูงสุดให้ material ของอาวุธที่โหลดจาก .glb — ลายจะคมขึ้นตอนมองเฉียง (ไม่เพิ่มความละเอียดต้นฉบับ)</div>
       </div>
 
       <div class="pbPane" data-pane="combat" style="display:none">
@@ -859,6 +863,42 @@
     return true;
   }
 
+  /* ── weapon texture sharpness (anisotropic filtering) ──
+     เกมตั้ง anisotropy ให้ texture ของตัวเอง แต่ material ที่โหลดจาก .glb
+     (skin) ใช้ค่า default 1 → พอลองปืนเฉียง ๆ ลายจะเบลอ
+     ตั้ง 16 (ไดรเวอร์จะ clamp ตาม max ที่รองรับ) แล้วสั่ง re-upload ครั้งเดียว */
+  const _sharpTexSeen = new WeakSet();
+  function applySharpWeaponTextures(pb) {
+    if (!CFG.sharpWeaponTex || !pb || !pb.scene) return 0;
+    const KEYS = ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "aoMap"];
+    let changed = 0;
+    try {
+      pb.scene.traverse((o) => {
+        if (!o || !o.isMesh || !o.material) return;
+        let up = o, isWeapon = false;
+        for (let i = 0; up && i < 10; i++, up = up.parent) {
+          if (typeof up.name === "string" && up.name.startsWith("weapon:")) { isWeapon = true; break; }
+        }
+        if (!isWeapon) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m) continue;
+          for (const k of KEYS) {
+            const t = m[k];
+            if (!t || _sharpTexSeen.has(t)) continue;
+            _sharpTexSeen.add(t);
+            try {
+              t.anisotropy = 16;
+              t.needsUpdate = true;
+              changed++;
+            } catch (_) { }
+          }
+        }
+      });
+    } catch (_) { }
+    return changed;
+  }
+
   // ผูก checkbox -> CFG
   for (const c of panel.querySelectorAll("input[type=checkbox]")) {
     const key = c.dataset.c;
@@ -883,8 +923,10 @@
       if (key === "noRecoil" && c.checked) {
         try { setTimeout(() => { scanEngine(); }, 600); } catch (_) {}
       }
-      if (key === "unlockFps") {
-        applyFpsUnlock();
+      if (key === "sharpWeaponTex" && c.checked) {
+        try { applySharpWeaponTextures(findPB()); } catch (_) { }
+      }
+      if (key === "unlockFps") {        applyFpsUnlock();
         try {
           setStatus(c.checked
             ? `unlock FPS: ตั้ง cap = ${capForMode() || 0} แล้ว — กด F5`
@@ -3810,6 +3852,7 @@
     updateAcChip();
     updateMasterChip();
     updateFeatureLine();
+    if (CFG.sharpWeaponTex) applySharpWeaponTextures(pbNow);
     const bridgeEl = panel.querySelector("#pbBridgeInfo");
     if (bridgeEl) {
       const r = findRenderer();
