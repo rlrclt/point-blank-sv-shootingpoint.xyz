@@ -1,4 +1,4 @@
-"""Import M1887 Element Water GLB into a fresh scene and save as .blend.
+﻿"""Import M1887 Element Water GLB into a fresh scene and save as .blend.
 
 Run inside Blender (MCP / bridge) after the file is ready:
     exec(open(r"...\\import_scene.py", encoding="utf-8").read())
@@ -7,14 +7,14 @@ Does:
   1. new empty scene (File > New, keeps add-ons)
   2. import sea3123_m1887_element_water.glb
   3. report hierarchy / meshes / materials
-  4. save makeskin/m1887_element_water.blend
+  4. save makeskin/eva01_m1887_element_water.blend
 """
 import bpy
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else r"C:\Users\YoruDekD\Desktop\pb-esp-ext\makeskin\m1887_element_water"
 GLB = os.path.join(HERE, "sea3123_m1887_element_water.glb")
-BLEND = os.path.join(HERE, "m1887_element_water.blend")
+BLEND = os.path.join(HERE, "eva01_m1887_element_water.blend")
 
 # 1. fresh scene
 bpy.ops.wm.read_homefile(use_empty=True)
@@ -39,3 +39,4 @@ print("images:", [(i.name, tuple(i.size)) for i in bpy.data.images])
 # 4. save
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 print("saved:", BLEND)
+
