@@ -12,8 +12,8 @@
      them. Turning it off therefore also has to undo the two things that keep
      the client in phone mode on its own: the ?touch=1 parameter and the
      remembered peripheral. */
-  let spoofOn = true;
-  try { if (localStorage.getItem("pbFakeMobile") === "0") spoofOn = false; } catch (_) {}
+  let spoofOn = false;
+  try { if (localStorage.getItem("pbFakeMobile") === "1") spoofOn = true; } catch (_) {}
 
   if (!spoofOn) {
     try {

@@ -26,8 +26,8 @@
     /* the checkbox has to show what was actually stored, otherwise it lies after
        a reload (it would tick itself back on while the spoof stays off) */
     fakeMobile: (function () {
-      try { return localStorage.getItem("pbFakeMobile") !== "0"; } catch (_) { return true; }
-    })(), // Bypass ตรวจจับ PC / ปลดล็อคห้องเฉพาะ Mobile
+      try { return localStorage.getItem("pbFakeMobile") === "1"; } catch (_) { return false; }
+    })(), // Bypass ตรวจจับ PC / ปลดล็อคห้องเฉพาะ Mobile (opt-in)
     // Humanization
     humanize: false,
     humanPitchAmp: 0.55,
@@ -75,7 +75,7 @@
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
     sharpWeaponTex: false,
   };
-  const VERSION = "v1.74";
+  const VERSION = "v1.75";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -179,6 +179,14 @@
     try { localStorage.setItem(CFG_KEY, JSON.stringify(CFG)); } catch (_) { }
   }
   loadCfg();
+  /* migration: mobile spoof is opt-in. Older configs had fakeMobile=true by
+     default, which forced the client into phone mode and stopped mouse fire. */
+  try {
+    if (CFG.fakeMobile && localStorage.getItem("pbFakeMobile") !== "1") {
+      CFG.fakeMobile = false;
+      saveCfg();
+    }
+  } catch (_) { }
 
   /* ---------- UI state (panel position / active tab) ---------- */
   const UI_KEY = "pbEspUi_v1";
@@ -334,7 +342,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.74</span>
+      <span id="pbTitle">PB ESP v1.75</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
