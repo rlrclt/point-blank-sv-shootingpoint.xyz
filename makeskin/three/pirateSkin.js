@@ -76,7 +76,7 @@ export class PirateSkin {
     root.traverse((obj) => {
       if (!obj.isMesh) return;
       // the cloth hilt wrap, the mounted ship and the katana keep their own materials from the glb
-      if (obj.name === 'HandleWrap' || obj.name === 'ShipRaw' ||
+      if (obj.name === 'HandleWrap' || obj.name === 'ShipRaw' || obj.name === 'MuzzleGlow' ||
           obj.name.startsWith('ZoroKatana') || obj.name.startsWith('KatanaGrip') || obj.name.startsWith('KatanaTsuba') ||
           (obj.material && (obj.material.name === 'wrap_cloth' || /^Material\.\d+$/.test(obj.material.name) || /^material[._]/.test(obj.material.name)))) return;
       const prev = obj.material;
