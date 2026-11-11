@@ -642,8 +642,64 @@ for (const [file, hash] of Object.entries(accessories)) {
   });
 }
 
+// 5. weapon texture sets (per skin)
+//    ชื่อไฟล์เท็กเจอร์ในเกมไม่คงที่: _diff/_normal/_ref/_refmask/_specular/_emissive/_vol
+//    หรือไม่มี suffix เลย — จับ role จาก token ท้ายชื่อแบบครอบคลุม แล้วเก็บไฟล์ครบทุกใบ
+const ROLE_ALIAS = {
+  diff: ["diff", "d", "col", "color", "colour", "albedo", "basecolor"],
+  norm: ["norm", "normal", "nrm", "n"],
+  ref: ["ref", "refl", "refmask", "rough", "roughness", "rm"],
+  spec: ["spec", "specular", "specullar", "speculer", "s"],
+  emis: ["emis", "emissive", "emit", "emission", "e"],
+  vol: ["vol", "volume"],
+  mask: ["mask", "msk", "opacity", "alpha"],
+};
+const aliasRole = new Map();
+for (const [role, list] of Object.entries(ROLE_ALIAS)) for (const a of list) aliasRole.set(a, role);
+const ROLE_ORDER = ["diff", "norm", "ref", "spec", "emis", "vol", "mask", "base", "extra"];
+
+function roleOfFile(f) {
+  const stem = f.replace(/\.[^.]+$/, "").toLowerCase();
+  const tok = stem.includes("_") ? stem.split("_").pop() : stem;
+  return aliasRole.get(tok) ?? "base";
+}
+
+const weaponByName = new Map(items.filter((i) => i.cat === "weapons").map((i) => [i.slug, i]));
+const texDirs = Object.keys(dirs).filter((k) => /^assets\/weapons\/models\/tex\/[^/]+$/.test(k));
+for (const key of texDirs) {
+  const slug = key.split("/").pop();
+  const w = weaponByName.get(slug);
+  const files = dirs[key] ?? {};
+  const pngs = Object.keys(files).filter((f) => f.toLowerCase().endsWith(".png"));
+  if (!pngs.length) continue;
+
+  const entries = pngs.map((f) => ({ f, role: roleOfFile(f), p: `/${key}/${f}` }));
+  entries.sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.f.localeCompare(b.f, "en"));
+  const roles = [...new Set(entries.map((e) => e.role))];
+  const primary = entries.find((e) => e.role === "diff") ?? entries.find((e) => e.role === "base") ?? entries[0];
+
+  items.push({
+    k: "t",
+    id: `t:${slug}`,
+    cat: "textures",
+    name: w ? w.name : slug.replace(/^sea3123_/, ""),
+    official: w?.official ?? null,
+    cls: w?.cls ?? "Other",
+    family: w?.family ?? "Texture",
+    variant: w?.variant ?? "",
+    tags: roles,
+    path: primary.p,
+    paths: entries.map((e) => e.p),
+    roles: entries.map((e) => e.role),
+    hash: files[primary.f] ?? "",
+    nfiles: Object.keys(files).length,
+    slug,
+    ...(primary ? { img: { u: primary.p } } : {}),
+  });
+}
+
 // stable order: category, then name, then slug
-const catOrder = { weapons: 0, cosmetics: 1, maps: 2, attachments: 3 };
+const catOrder = { weapons: 0, cosmetics: 1, maps: 2, attachments: 3, textures: 4 };
 items.sort(
   (a, b) =>
     (catOrder[a.cat] ?? 9) - (catOrder[b.cat] ?? 9) ||

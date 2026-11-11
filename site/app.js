@@ -33,10 +33,11 @@
     { id: "cosmetics", label: "เครื่องแต่งตัว", desc: "ชุด หมวก ผม หน้ากาก ถุงมือ และเซ็ตเต็มตัวของตัวละคร" },
     { id: "maps", label: "แผนที่", desc: "แผนที่ที่เล่นได้ รวมฉบับ Classic และ PC3123" },
     { id: "attachments", label: "อุปกรณ์ติดปืน", desc: "โมเดลอุปกรณ์เสริมของอาวุธ แยกตามคีย์ตัวเลข" },
+    { id: "textures", label: "เท็กเจอร์", desc: "ชุดเท็กเจอร์ปืนต่อสกิน (diff/norm/ref/spec/emis) — ตั้งชื่อตามปืนต้นฉบับ ใช้อ้างอิงทำ modskin" },
   ];
   const ALL_CATS = [OWNED_CAT, ...CATS];
   const CAT_LABEL = { ...Object.fromEntries(CATS.map((c) => [c.id, c.label])), owned: OWNED_CAT.label };
-  const CAT_COLOR = { weapons: "var(--weapons)", cosmetics: "var(--cosmetics)", maps: "var(--maps)", attachments: "var(--attachments)", owned: "var(--owned)" };
+  const CAT_COLOR = { weapons: "var(--weapons)", cosmetics: "var(--cosmetics)", maps: "var(--maps)", attachments: "var(--attachments)", textures: "var(--textures)", owned: "var(--owned)" };
   const availableCats = () => ALL_CATS;
   const CLASS_TH = {
     Rifle: "ปืนเล็กยาว", SMG: "ปืนกลมือ", Sniper: "ปืนซุ่มยิง", Shotgun: "ปืนลูกซอง",
@@ -284,7 +285,7 @@
   function facetValues() {
     const set = new Map();
     for (const it of baseItems()) {
-      const v = isCosmetic() ? it.slot : (state.cat === "weapons" || state.cat === "owned") ? it.cls : state.cat === "maps" ? "Edition" : "All";
+      const v = isCosmetic() ? it.slot : (state.cat === "weapons" || state.cat === "owned" || state.cat === "textures") ? it.cls : state.cat === "maps" ? "Edition" : "All";
       if (state.cat === "maps") {
         for (const t of it.tags) set.set(t, (set.get(t) || 0) + 1);
       } else if (v && v !== "All") {
@@ -534,7 +535,7 @@
       sid.addEventListener("click", copySid);
       sid.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") copySid(e); });
     }
-    b.querySelector(".ghost").textContent = item.cat === "weapons" ? (CLASS_TH[item.cls] || item.cls || "") : item.cat === "cosmetics" ? (SLOT_TH[item.slot] || item.slot || "") : item.cat === "maps" ? facetText(item.tags[0] || "") : "แอสเซ็ต";
+    b.querySelector(".ghost").textContent = item.cat === "weapons" ? (CLASS_TH[item.cls] || item.cls || "") : item.cat === "cosmetics" ? (SLOT_TH[item.slot] || item.slot || "") : item.cat === "maps" ? facetText(item.tags[0] || "") : item.cat === "textures" ? "เท็กเจอร์" : "แอสเซ็ต";
     b.querySelector("h3").textContent = item.name;
     const sub = item.cat === "weapons"
       ? [item.family, item.variant].filter(Boolean).join(" · ")
@@ -542,7 +543,9 @@
         ? [item.slot, item.variant].filter(Boolean).join(" · ")
         : item.cat === "maps"
           ? "Map · " + item.tags.join(" + ")
-          : "Weapon attachment";
+          : item.cat === "textures"
+            ? [item.family, item.variant].filter(Boolean).join(" · ") + ` · ${item.nfiles || (item.paths || []).length} ไฟล์`
+            : "Weapon attachment";
     b.querySelector(".sub").textContent = sub;
 
     const tags = b.querySelector(".tags");
@@ -565,6 +568,8 @@
       if (item.variant) add(item.variant);
     } else if (item.cat === "maps") {
       for (const t of item.tags) add(facetText(t), "cls");
+    } else if (item.cat === "textures") {
+      for (const t of item.tags) add(t.toUpperCase(), "cls");
     } else {
       add("อุปกรณ์ติดปืน", "cls");
     }
@@ -669,7 +674,7 @@
     writeHash();
 
     detail.style.setProperty("--cat", CAT_COLOR[it.cat]);
-    document.getElementById("d-mark").textContent = it.cat === "weapons" ? "W" : it.cat === "cosmetics" ? "C" : it.cat === "maps" ? "M" : "A";
+    document.getElementById("d-mark").textContent = it.cat === "weapons" ? "W" : it.cat === "cosmetics" ? "C" : it.cat === "maps" ? "M" : it.cat === "textures" ? "T" : "A";
     document.getElementById("d-title").textContent = it.name;
     document.getElementById("d-sub").textContent = `${CAT_LABEL[it.cat]} · ${it.id}`;
     const art = document.getElementById("d-art");
@@ -693,12 +698,36 @@
       }
       kv.append(dt, dd);
     };
-    if (it.cat === "weapons") put("คลาส", CLASS_TH[it.cls] || it.cls);
+    if (it.cat === "weapons" || it.cat === "textures") put("คลาส", CLASS_TH[it.cls] || it.cls);
     if (it.cat === "cosmetics") put("ช่อง", SLOT_TH[it.slot] || it.slot);
     if (it.cat === "weapons" || it.cat === "cosmetics") put("ตระกูล", it.family);
     put("รุ่น", it.variant);
     if (it.cat === "maps") put("ฉบับ", it.tags.map(facetText).join(", "));
     else put("แท็ก", (it.tags || []).map(facetText).join(", "));
+    if (it.cat === "textures" && Array.isArray(it.paths)) {
+      const ROLE_TH = { diff: "diff (สี/ลาย)", norm: "norm (normal)", ref: "ref (reflect/rough)", spec: "spec (specular)", emis: "emis (emissive)", vol: "vol (volume)", mask: "mask", base: "base (ไฟล์หลัก)", extra: "อื่น ๆ" };
+      const dt = document.createElement("dt");
+      dt.textContent = "ไฟล์เท็กเจอร์";
+      const dd = document.createElement("dd");
+      dd.className = "spawn-ids";
+      it.paths.forEach((p, i) => {
+        const role = (it.roles || [])[i] || "extra";
+        const name = p.split("/").pop();
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn sm";
+        b.textContent = `${ROLE_TH[role] || role} · ${name}`;
+        b.title = p;
+        b.addEventListener("click", async () => {
+          const copied = await copyText(p);
+          b.textContent = copied ? "คัดลอกพาธแล้ว" : "ไม่สำเร็จ";
+          setTimeout(() => { b.textContent = `${ROLE_TH[role] || role} · ${name}`; }, 1200);
+        });
+        dd.append(b);
+      });
+      kv.append(dt, dd);
+      if (it.nfiles) put("ไฟล์ทั้งหมด", `${it.nfiles} ไฟล์ (รวม .dds/.ktx2)`);
+    }
     if (it.cat === "weapons" && it.fx) {
       if (it.fx.hitHeart) put("FX ตอนโดน", "หัวใจ (Hit_CoupleBreaker_Heart)");
       if (it.fx.theme) put("ธีม FX ยิง", it.fx.theme);
