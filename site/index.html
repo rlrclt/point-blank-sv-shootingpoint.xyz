@@ -248,6 +248,7 @@
   }
   .tag.cls { color: color-mix(in srgb, var(--cat, var(--accent)) 80%, white); border-color: color-mix(in srgb, var(--cat, var(--accent)) 32%, transparent); }
   .tag.owned { color: var(--owned); border-color: color-mix(in srgb, var(--owned) 55%, var(--line)); }
+  .tag.fx { color: #ff6b9d; border-color: color-mix(in srgb, #ff6b9d 45%, var(--line)); }
   .card .kbd-id {
     position: absolute; top: 14px; left: 14px; font-size: 10px; color: var(--dim);
     background: rgba(7, 11, 18, .72); border: 1px solid var(--line-soft); border-radius: 5px;
@@ -404,6 +405,7 @@
 
     <section class="filters" aria-label="ตัวกรอง">
       <div class="chips" id="facets"></div>
+      <div class="chips" id="fxfacets" hidden></div>
       <select class="field" id="family" aria-label="Filter by family"></select>
       <select class="field" id="sort" aria-label="เรียงลำดับ">
         <option value="name">ชื่อ A-Z</option>

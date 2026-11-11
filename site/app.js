@@ -14,6 +14,7 @@
   const serverMeta = document.getElementById("server-meta");
   const ownedOnlyInput = document.getElementById("owned-only");
   const facetsEl = document.getElementById("facets");
+  const fxFacetsEl = document.getElementById("fxfacets");
   const catsEl = document.getElementById("cats");
   const detail = document.getElementById("detail");
 
@@ -59,6 +60,7 @@
     cat: "weapons",
     q: "",
     facet: "All",
+    fx: "All",
     family: "All",
     sort: "name",
     open: null,
@@ -228,6 +230,7 @@
     if (p.get("c") && CAT_LABEL[p.get("c")]) state.cat = p.get("c");
     if (p.get("q")) state.q = p.get("q");
     if (p.get("facet")) state.facet = p.get("facet");
+    if (p.get("fx")) state.fx = p.get("fx");
     if (p.get("family")) state.family = p.get("family");
     if (p.get("sort")) state.sort = p.get("sort");
     if (p.get("item")) state.open = p.get("item");
@@ -253,6 +256,7 @@
     if (state.cat !== "weapons") p.set("c", state.cat);
     if (state.q) p.set("q", state.q);
     if (state.facet !== "All") p.set("facet", state.facet);
+    if (state.fx !== "All") p.set("fx", state.fx);
     if (state.family !== "All") p.set("family", state.family);
     if (state.sort !== "name") p.set("sort", state.sort);
     if (state.open) p.set("item", state.open);
@@ -314,6 +318,9 @@
     if (state.cat !== "maps" && state.family !== "All") {
       arr = arr.filter((i) => i.family === state.family);
     }
+    if (state.fx !== "All") {
+      arr = arr.filter((i) => (i.fxtags || []).includes(state.fx));
+    }
     if (terms) {
       arr = arr.filter((i) => terms.every((t) => i._s.includes(t) || i._sc.includes(t)));
     }
@@ -357,11 +364,74 @@
         if (state.cat === c.id) return;
         state.cat = c.id;
         state.facet = "All";
+        state.fx = "All";
         state.family = "All";
         state.open = null;
         sync();
       });
       catsEl.append(b);
+    }
+  }
+
+  const FX_ORDER = [
+    "heart-hit", "fire-heart", "custom-fire", "fire1st", "tracer",
+    "color-red", "color-orange", "color-gold", "color-green", "color-cyan",
+    "color-blue", "color-purple", "color-pink", "color-black", "color-white", "color-grey",
+  ];
+  const FX_LABEL = {
+    "heart-hit": "♥ FX โดนหัวใจ",
+    "fire-heart": "♥ ยิงธีมหัวใจ",
+    "custom-fire": "ชุดยิงพิเศษ",
+    "fire1st": "FX นัดแรก",
+    "tracer": "tracer พิเศษ",
+    "color-red": "แฟลชแดง", "color-orange": "แฟลชส้ม", "color-gold": "แฟลชทอง",
+    "color-green": "แฟลชเขียว", "color-cyan": "แฟลชฟ้าน้ำ", "color-blue": "แฟลชน้ำเงิน",
+    "color-purple": "แฟลชม่วง", "color-pink": "แฟลชชมพู", "color-black": "แฟลชดำ",
+    "color-white": "แฟลชขาว", "color-grey": "แฟลชเทา",
+  };
+
+  function fxValues() {
+    const set = new Map();
+    for (const it of baseItems()) {
+      for (const t of it.fxtags || []) {
+        if (FX_LABEL[t]) set.set(t, (set.get(t) || 0) + 1);
+      }
+    }
+    return [...set.entries()].sort((a, b) =>
+      FX_ORDER.indexOf(a[0]) - FX_ORDER.indexOf(b[0]) || b[1] - a[1]);
+  }
+
+  function renderFxChips() {
+    fxFacetsEl.innerHTML = "";
+    const values = fxValues();
+    if ((state.cat !== "weapons" && state.cat !== "owned") || !values.length) {
+      fxFacetsEl.hidden = true;
+      state.fx = "All";
+      return;
+    }
+    fxFacetsEl.hidden = false;
+    const all = document.createElement("button");
+    all.className = "chip";
+    all.type = "button";
+    all.style.setProperty("--cat", CAT_COLOR[state.cat]);
+    all.setAttribute("aria-pressed", state.fx === "All" ? "true" : "false");
+    all.textContent = "เอฟเฟกต์: ทั้งหมด";
+    all.addEventListener("click", () => { state.fx = "All"; sync(); });
+    fxFacetsEl.append(all);
+
+    for (const [value, n] of values) {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.style.setProperty("--cat", CAT_COLOR[state.cat]);
+      b.setAttribute("aria-pressed", state.fx === value ? "true" : "false");
+      b.append(document.createTextNode(FX_LABEL[value] || value));
+      const s = document.createElement("span");
+      s.className = "n";
+      s.textContent = n;
+      b.append(s);
+      b.addEventListener("click", () => { state.fx = value; sync(); });
+      fxFacetsEl.append(b);
     }
   }
 
@@ -486,6 +556,10 @@
       add(CLASS_TH[item.cls] || item.cls, "cls");
       if (state.cat === "owned" && matchesOwned(item)) add("มีแล้ว", "owned");
       if (item.variant) for (const t of item.variant.split(" ").slice(0, 2)) add(t);
+      const fxt = item.fxtags || [];
+      if (fxt.includes("heart-hit")) add("♥ โดนหัวใจ", "fx");
+      else if (fxt.includes("fire-heart")) add("♥ ยิงหัวใจ", "fx");
+      if (item.fx?.color) add("FX สี" + item.fx.colorTh, "fx");
     } else if (item.cat === "cosmetics") {
       add(SLOT_TH[item.slot] || item.slot, "cls");
       if (item.variant) add(item.variant);
@@ -538,6 +612,7 @@
     updateServerMeta();
     renderCats();
     renderFacets();
+    renderFxChips();
     renderFamilies();
     renderHero();
     applyFilter();
@@ -624,6 +699,14 @@
     put("รุ่น", it.variant);
     if (it.cat === "maps") put("ฉบับ", it.tags.map(facetText).join(", "));
     else put("แท็ก", (it.tags || []).map(facetText).join(", "));
+    if (it.cat === "weapons" && it.fx) {
+      if (it.fx.hitHeart) put("FX ตอนโดน", "หัวใจ (Hit_CoupleBreaker_Heart)");
+      if (it.fx.theme) put("ธีม FX ยิง", it.fx.theme);
+      if (it.fx.color) put("สีแฟลชตอนยิง", `${it.fx.colorTh} (${(it.fx.flash || []).join(",")})`);
+      if (it.fx.fire) put("ชุด FX ยิง", it.fx.fire);
+      if (it.fx.fire1st) put("FX นัดแรก", it.fx.fire1st);
+      if (it.fx.tracer != null) put("Tracer พิเศษ", it.fx.tracer);
+    }
     const paths = it.paths || [it.path];
     put(paths.length > 1 ? "พาธไฟล์" : "พาธไฟล์", paths.join("\n"));
     put("แฮช", it.hash);
@@ -881,6 +964,7 @@
 
   renderCats();
   renderFacets();
+  renderFxChips();
   renderFamilies();
   renderHero();
   applyFilter();
