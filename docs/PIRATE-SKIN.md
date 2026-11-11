@@ -13,7 +13,7 @@
 | `makeskin\check_weapon_glb.mjs` | ตรวจไฟล์: `node check_weapon_glb.mjs <candidate> [ref]` |
 | `makeskin\tex\sea3123_zombieslayer\skin_pirate_{diff,norm,orm}.png` | atlas สกิน — **1024×512 ห้ามขยาย** (เกม tier alto โหลด texture ที่ 1024) |
 | `makeskin\three\pirateSkin.js` | preview three.js — มี skip-list mesh ที่คง material ตัวเอง |
-| `AppData\Local\Temp\opencode\pirate_edit_v4.py` | generator atlas (Lanczos 1440×720 → 1024×512 + UnsharpMask r1.2/75%) — temp dir เสี่ยงถูกลบ, ควรย้ายเข้า repo ถ้าจะแก้ texture ต่อ |
+| `makeskin\gen\pirate_edit_v4.py` | generator atlas (Lanczos 1440×720 → 1024×512 + UnsharpMask r1.2/75%) — self-contained, path อิงจากตำแหน่งสคริปต์, ใช้ `gen\zs_mask.npy` |
 
 ## โครงสร้างซีน (Blender, Z-up)
 
