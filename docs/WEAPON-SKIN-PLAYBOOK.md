@@ -1,6 +1,7 @@
 # Weapon Skin Playbook — ทำสกินปืนต้นอื่น (มาใช้ต่อได้ทันที)
 
 > สรุปจากงานจริงชุด Pirate (Zombie Slayer) — รายละเอียดเฉพาะงานนั้น: `docs/PIRATE-SKIN.md`
+> หลักการออกแบบลายให้สวย/อ่านง่ายแบบ Valorant: `docs/SKIN-DESIGN-GUIDE.md`
 > ขั้นตอนตรวจ rig/ดู preview/เทสในเกม: `makeskin/README.md` (อ่านก่อน เนื้อหาไม่ซ้ำตรงนี้)
 
 ## 0) เลือกปืนและหาข้อมูล
