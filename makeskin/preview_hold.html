@@ -30,7 +30,7 @@
 <body>
 <div id="hud">loading…</div>
 <div id="help">
-  <b>1</b> first-person · <b>2</b> orbit · <b>R</b> reference ghost · <b>H</b> hand marker · <b>G</b> grid
+  <b>1</b> first-person · <b>2</b> orbit · <b>3</b> side · <b>4</b> top · <b>R</b> reference ghost · <b>H</b> hand marker · <b>G</b> grid
 </div>
 <div id="err"></div>
 
@@ -76,6 +76,13 @@ scene.add(rim);
 const grid = new THREE.GridHelper(4, 40, 0x2a3648, 0x161d27);
 grid.position.y = 0;
 scene.add(grid);
+
+// yellow guide = game barrel axis (glTF +Y, muzzle at y≈0.64)
+const barrelLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.7, 0)]),
+  new THREE.LineBasicMaterial({ color: 0xffd24a })
+);
+scene.add(barrelLine);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.01, 100);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -200,7 +207,17 @@ async function main() {
   const applyView = (mode) => {
     state.mode = mode;
     if (mode === 'fp') applyFirstPerson();
-    else fitCamera(model);
+    else if (mode === 'side') {
+      const c = state.target;
+      camera.position.set(c.x + 1.9, c.y + 0.05, c.z);
+      controls.target.copy(c);
+      controls.update();
+    } else if (mode === 'top') {
+      const c = state.target;
+      camera.position.set(c.x, c.y + 1.9, c.z + 0.01);
+      controls.target.copy(c);
+      controls.update();
+    } else fitCamera(model);
   };
   applyView('orbit');
 
@@ -208,6 +225,8 @@ async function main() {
     const k = e.key.toLowerCase();
     if (k === '1') applyView('fp');
     if (k === '2') applyView('orbit');
+    if (k === '3') applyView('side');
+    if (k === '4') applyView('top');
     if (k === 'r' && state.ref) { state.refOn = !state.refOn; state.ref.visible = state.refOn; }
     if (k === 'h') hand.visible = !hand.visible;
     if (k === 'g') grid.visible = !grid.visible;
