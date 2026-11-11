@@ -75,7 +75,7 @@
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
     sharpWeaponTex: false,
   };
-  const VERSION = "v1.73";
+  const VERSION = "v1.74";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -334,7 +334,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.73</span>
+      <span id="pbTitle">PB ESP v1.74</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -870,8 +870,13 @@
   const _sharpTexSeen = new WeakSet();
   function applySharpWeaponTextures(pb) {
     if (!CFG.sharpWeaponTex || !pb || !pb.scene) return 0;
-    const KEYS = ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "aoMap"];
+    const KEYS = ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "aoMap", "specMap", "refMap"];
     let changed = 0;
+    const sharpen = (t) => {
+      if (!t || !t.isTexture || _sharpTexSeen.has(t)) return;
+      _sharpTexSeen.add(t);
+      try { t.anisotropy = 16; t.needsUpdate = true; changed++; } catch (_) { }
+    };
     try {
       pb.scene.traverse((o) => {
         if (!o || !o.isMesh || !o.material) return;
@@ -883,16 +888,10 @@
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         for (const m of mats) {
           if (!m) continue;
-          for (const k of KEYS) {
-            const t = m[k];
-            if (!t || _sharpTexSeen.has(t)) continue;
-            _sharpTexSeen.add(t);
-            try {
-              t.anisotropy = 16;
-              t.needsUpdate = true;
-              changed++;
-            } catch (_) { }
-          }
+          for (const k of KEYS) sharpen(m[k]);
+          // เกมใช้ ShaderMaterial + uniforms (map/normalMap/specMap/...)
+          const u = m.uniforms;
+          if (u) for (const k of KEYS) sharpen(u[k] && u[k].value);
         }
       });
     } catch (_) { }
