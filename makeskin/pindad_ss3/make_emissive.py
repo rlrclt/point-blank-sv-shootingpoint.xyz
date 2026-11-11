@@ -25,8 +25,8 @@ def to_emissive(path, out_path):
     mn = a.min(2)
     sat = (mx - mn) / (mx + 1e-6)
 
-    # neon = bright + saturated (lines, screens, stripes); ignore metal/plastic
-    mask = ((mx > 0.45) & (sat > 0.35)) | (mx > 0.85)
+    # neon = bright + saturated (lines, screens, stripes); ignore metal/plastic highlights
+    mask = (mx > 0.35) & (sat > 0.45) & ((mx - mn) > 0.25)
     mask = mask.astype(np.float32)
 
     # keep the original hue, boost it, and add a soft falloff so it reads as glow

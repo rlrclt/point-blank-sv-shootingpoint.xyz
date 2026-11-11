@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>PB Skin Viewer — glow preview</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #07090d; overflow: hidden; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; left: 16px; top: 14px; display: flex; gap: 8px; align-items: center;
+    font: 12px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; color: #cfe3ff;
+    background: rgba(10, 14, 20, .72); border: 1px solid #1d2a3d; border-radius: 10px;
+    padding: 8px 10px; backdrop-filter: blur(8px);
+  }
+  #ui select, #ui button {
+    font: inherit; color: #cfe3ff; background: #0d141e; border: 1px solid #24344a;
+    border-radius: 7px; padding: 4px 8px; cursor: pointer;
+  }
+  #ui button[aria-pressed="true"] { border-color: #4aa3ff; color: #9fd0ff; box-shadow: 0 0 0 1px #4aa3ff inset; }
+  #hud {
+    position: fixed; left: 16px; bottom: 14px; pointer-events: none;
+    font: 12px/1.5 ui-monospace, Consolas, monospace; color: #8fb6dd; opacity: .8;
+  }
+  #hud b { color: #d8ecff; }
+  #err {
+    position: fixed; inset: 0; display: none; place-items: center; padding: 24px;
+    font: 13px/1.7 ui-monospace, Consolas, monospace; color: #ffd7a8; text-align: center;
+    background: #07090d;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <span>โมเดล</span>
+  <select id="model">
+    <option value="./pindad_ss3/pindad_ss3_neon_glow.glb">Pindad SS3 — neon glow</option>
+    <option value="./pindad_ss3/pindad_ss3_neon.glb">Pindad SS3 — neon (no glow)</option>
+    <option value="./kar98k_aztec_basic/kar98k_aztec_basic_eva01.glb">Kar98k — EVA-01</option>
+    <option value="./sakura_aug_a3_dark_cupid/sakura_aug_a3_dark_cupid.glb">AUG A3 — sakura</option>
+    <option value="./eva01_m1887_element_water/eva01_m1887_element_water.glb">M1887 — EVA-01</option>
+    <option value="./sea3123_zombieslayer.glb">Zombie Slayer — reference</option>
+  </select>
+  <button id="bloom" aria-pressed="true">Glow</button>
+  <button id="spin" aria-pressed="false">หมุน</button>
+  <button id="shot">บันทึกภาพ</button>
+</div>
+
+<div id="hud"><b id="hud-name">—</b><br />ลากเพื่อหมุน · scroll ซูม · ลากขวาเลื่อน</div>
+<div id="err"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const params = new URLSearchParams(location.search);
+const modelSel = document.getElementById('model');
+const bloomBtn = document.getElementById('bloom');
+const spinBtn = document.getElementById('spin');
+if (params.get('model')) {
+  const opt = [...modelSel.options].find(o => o.value.includes(params.get('model')));
+  if (opt) modelSel.value = opt.value;
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0e14);
+
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.01, 100);
+
+// studio lighting: room env for metals + key/fill/rim
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.4;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 3.5, 3);
+const fill = new THREE.DirectionalLight(0x9ec6ff, 0.7); fill.position.set(-3, 1, -2);
+const rim = new THREE.DirectionalLight(0xffd9a8, 1.0); rim.position.set(0, -1.5, -3);
+scene.add(key, fill, rim, new THREE.HemisphereLight(0x6688aa, 0x101418, 0.5));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 0.15;
+controls.maxDistance = 8;
+
+// post: render -> bloom -> output
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.4, 1.0);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+let pivot = null;
+let spinning = false;
+const hudName = document.getElementById('hud-name');
+
+function frame(model) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  const s = 1 / Math.max(size.x, size.y, size.z);
+  model.scale.setScalar(s);
+  model.position.sub(centre.multiplyScalar(s));
+
+  pivot = new THREE.Group();
+  pivot.add(model);
+  scene.add(pivot);
+  pivot.rotation.set(-0.15, -0.75, 0.08);
+
+  const radius = size.length() * 0.5 * s;
+  camera.position.set(0.45, 0.5, 1).normalize().multiplyScalar(radius * 2.5);
+  camera.near = radius * 0.05;
+  camera.far = radius * 60;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+async function loadModel(path) {
+  if (pivot) { scene.remove(pivot); pivot.traverse(o => { o.geometry?.dispose?.(); }); pivot = null; }
+  hudName.textContent = path.split('/').pop();
+  const gltf = await new GLTFLoader().loadAsync(path);
+  frame(gltf.scene);
+  window.__viewer = { renderer, scene, camera, composer, bloom, model: gltf.scene };
+}
+
+function setBloom(on) {
+  bloomBtn.setAttribute('aria-pressed', String(on));
+  bloom.enabled = on;
+}
+bloomBtn.addEventListener('click', () => setBloom(bloomBtn.getAttribute('aria-pressed') !== 'true'));
+spinBtn.addEventListener('click', () => {
+  spinning = !spinning;
+  spinBtn.setAttribute('aria-pressed', String(spinning));
+});
+
+document.getElementById('shot').addEventListener('click', () => {
+  renderer.render(scene, camera);
+  const a = document.createElement('a');
+  a.href = renderer.domElement.toDataURL('image/png');
+  a.download = (hudName.textContent || 'skin') + '.png';
+  a.click();
+});
+
+modelSel.addEventListener('change', () => {
+  history.replaceState(null, '', '?model=' + encodeURIComponent(modelSel.value.split('/').pop()));
+  loadModel(modelSel.value).catch(fail);
+});
+
+renderer.setAnimationLoop(() => {
+  if (spinning && pivot) pivot.rotation.y += 0.006;
+  controls.update();
+  composer.render();
+});
+
+function fail(e) {
+  console.error(e);
+  const el = document.getElementById('err');
+  el.style.display = 'grid';
+  el.innerHTML = `โหลดไม่สำเร็จ: ${e.message}<br><br>
+    ต้องเสิร์ฟผ่าน http · รัน <b>python -m http.server 8123</b> ในโฟลเดอร์ makeskin<br>
+    แล้วเปิด <b>http://localhost:8123/preview_skin.html</b>`;
+}
+
+loadModel(modelSel.value).catch(fail);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
