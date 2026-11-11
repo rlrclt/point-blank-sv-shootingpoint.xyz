@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>Weapon hold test — makeskin</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #07090c; overflow: hidden; }
+  canvas { display: block; }
+  #hud {
+    position: fixed; left: 14px; top: 12px; pointer-events: none;
+    font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color: #cfe3ff; opacity: .9; max-width: 52ch;
+  }
+  #hud b { color: #fff; }
+  #hud .ok { color: #6cf29a; }
+  #hud .warn { color: #ffb020; }
+  #hud .dim { color: #8ba0b8; }
+  #help {
+    position: fixed; left: 14px; bottom: 12px; pointer-events: none;
+    font: 11px/1.7 ui-monospace, Consolas, monospace; color: #ffd79a; opacity: .72;
+  }
+  #err {
+    position: fixed; inset: 0; display: none; place-items: center; padding: 24px;
+    font: 13px/1.7 ui-monospace, Consolas, monospace; color: #ffd7a8; text-align: center;
+    background: #07090c;
+  }
+</style>
+</head>
+<body>
+<div id="hud">loading…</div>
+<div id="help">
+  <b>1</b> first-person · <b>2</b> orbit · <b>R</b> reference ghost · <b>H</b> hand marker · <b>G</b> grid
+</div>
+<div id="err"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const q = new URLSearchParams(location.search);
+const MODEL = q.get('model') || 'zombie_slayer_onepiece.glb';
+const REF = q.get('ref') || 'sea3123_zombieslayer.glb';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#07090c');
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x20242c, 1.15));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(1.6, 2.4, 1.2);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x8fb8ff, 1.1);
+rim.position.set(-1.4, 0.8, -1.8);
+scene.add(rim);
+
+const grid = new THREE.GridHelper(4, 40, 0x2a3648, 0x161d27);
+grid.position.y = 0;
+scene.add(grid);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.01, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 0.15;
+controls.maxDistance = 24;
+
+// hand / grip origin marker (game attaches root here)
+const hand = new THREE.Group();
+const handBox = new THREE.Mesh(
+  new THREE.BoxGeometry(0.075, 0.11, 0.075),
+  new THREE.MeshStandardMaterial({ color: 0xff5566, roughness: 0.6, transparent: true, opacity: 0.75 })
+);
+handBox.position.set(0, 0.02, 0);
+hand.add(handBox);
+hand.add(new THREE.AxesHelper(0.18));
+scene.add(hand);
+
+const dummyColors = { FXDummy: 0x63d2ff, FXDummy_Body: 0x63d2ff, MagazineDummy: 0xffcf5a, HandelAnimationDummy: 0x8dff9c };
+const marks = new THREE.Group();
+scene.add(marks);
+
+const hud = document.getElementById('hud');
+const state = { ref: null, refOn: false, target: new THREE.Vector3(0, 0.08, 0.3), mode: 'orbit', size: new THREE.Vector3(0.6, 0.2, 0.8) };
+const loader = new GLTFLoader();
+
+function dummyPositions(root) {
+  const out = [];
+  root.traverse((o) => {
+    if (!dummyColors[o.name]) return;
+    const v = new THREE.Vector3();
+    o.getWorldPosition(v);
+    out.push({ name: o.name, p: v.clone(), color: dummyColors[o.name] });
+  });
+  return out;
+}
+
+function buildDummyMarks(list) {
+  marks.clear();
+  const geo = new THREE.SphereGeometry(0.012, 12, 10);
+  for (const d of list) {
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: d.color }));
+    m.position.copy(d.p);
+    marks.add(m);
+  }
+}
+
+function fitCamera(model) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  state.size.copy(size);
+  state.target.copy(center);
+  const dist = Math.max(size.x, size.y, size.z) * 1.9 + 0.25;
+  camera.position.set(center.x + dist * 0.55, center.y + dist * 0.35, center.z + dist);
+  camera.near = 0.005;
+  camera.far = Math.max(50, dist * 40);
+  camera.updateProjectionMatrix();
+  controls.target.copy(center);
+  controls.update();
+  return { box, size, center };
+}
+
+function applyFirstPerson() {
+  // game view: camera behind the grip, weapon pointing +Z
+  const len = Math.max(state.size.z, 0.4);
+  camera.position.set(0.11, 0.03, -0.24);
+  controls.target.set(0.02, 0.03, len * 0.55);
+  camera.near = 0.005;
+  camera.far = 80;
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+function ghost(root) {
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = new THREE.MeshBasicMaterial({
+      color: 0x39ff88, wireframe: true, transparent: true, opacity: 0.28, depthWrite: false,
+    });
+    o.castShadow = false;
+  });
+}
+
+async function main() {
+  const gltf = await loader.loadAsync(MODEL);
+  const model = gltf.scene;
+  scene.add(model);
+  const { size, center } = fitCamera(model);
+
+  const longest = size.x > size.y && size.x > size.z ? 'X' : (size.y > size.z ? 'Y' : 'Z');
+  const dummies = dummyPositions(model);
+  buildDummyMarks(dummies);
+
+  const missing = ['GunDummy', 'WholeAniDummy', 'HandelAnimationDummy', 'MagazineDummy', 'FXDummy']
+    .filter((n) => !model.getObjectByName(n));
+  const grip = model.getObjectByName('HandelAnimationDummy') || model.getObjectByName('GunDummy');
+  const gripPos = grip ? grip.getWorldPosition(new THREE.Vector3()) : null;
+
+  const lines = [];
+  lines.push(`<b>${MODEL}</b>`);
+  lines.push(`size ${size.x.toFixed(3)} × ${size.y.toFixed(3)} × ${size.z.toFixed(3)} m · longest ${longest}`);
+  lines.push(`center [${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)}] · root/pivot [0,0,0]`);
+  if (gripPos) lines.push(`grip node: ${grip.name} @ [${gripPos.x.toFixed(3)}, ${gripPos.y.toFixed(3)}, ${gripPos.z.toFixed(3)}]`);
+  if (missing.length) lines.push(`<span class="warn">⚠ dummy ขาด: ${missing.join(', ')}</span>`);
+  else lines.push(`<span class="ok">✔ dummy ครบ (GunDummy / WholeAniDummy / HandelAnimationDummy / MagazineDummy / FXDummy)</span>`);
+  if (longest !== 'Z') lines.push(`<span class="warn">⚠ แกนยาวเป็น ${longest} (เกมใช้ Z) → ปืนจะชี้ผิดทาง</span>`);
+  if (Math.max(size.x, size.y, size.z) > 2.2) lines.push(`<span class="warn">⚠ ยาว ${Math.max(size.x, size.y, size.z).toFixed(2)} m — ใหญ่ผิดปกติ (สเกลยังไม่ normalize)</span>`);
+  lines.push(`<span class="dim">กล่องแดง = จุดที่เกมแนบมือ · แกนเขียว = forward/up/right ของ root</span>`);
+  hud.innerHTML = lines.join('<br>');
+
+  try {
+    const r = await loader.loadAsync(REF);
+    const refScene = r.scene;
+    refScene.visible = false;
+    ghost(refScene);
+    scene.add(refScene);
+    state.ref = refScene;
+  } catch (_) { /* reference optional */ }
+
+  const applyView = (mode) => {
+    state.mode = mode;
+    if (mode === 'fp') applyFirstPerson();
+    else fitCamera(model);
+  };
+  applyView('orbit');
+
+  addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === '1') applyView('fp');
+    if (k === '2') applyView('orbit');
+    if (k === 'r' && state.ref) { state.refOn = !state.refOn; state.ref.visible = state.refOn; }
+    if (k === 'h') hand.visible = !hand.visible;
+    if (k === 'g') grid.visible = !grid.visible;
+  });
+
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    renderer.render(scene, camera);
+  });
+
+  window.__hold = { scene, camera, controls, model, state, applyView };
+}
+
+main().catch((e) => {
+  console.error(e);
+  const el = document.getElementById('err');
+  el.style.display = 'grid';
+  el.innerHTML = `โหลดไม่สำเร็จ: ${e.message}<br><br>
+    ต้องเสิร์ฟผ่าน http (ไม่ใช่ file://) — รันในโฟลเดอร์ makeskin:<br>
+    <b>python -m http.server 8123</b><br>
+    แล้วเปิด <b>http://localhost:8123/preview_hold.html?model=${encodeURIComponent(MODEL)}</b>`;
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
