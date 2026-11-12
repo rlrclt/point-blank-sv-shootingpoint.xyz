@@ -75,7 +75,7 @@
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
     sharpWeaponTex: false,
   };
-  const VERSION = "v1.75";
+  const VERSION = "v1.76";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -342,7 +342,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.75</span>
+      <span id="pbTitle">PB ESP v1.76</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -3696,11 +3696,18 @@
         try {
           const s = args.map(String).join(" ");
           if (CFG.panicOnAc && !window.__pbAcPanicBusy && /\[anti-cheat\]/i.test(s)) {
-            window.__pbAcPanicBusy = true;
-            setTimeout(() => {
-              try { panicNow(); } catch (_) { }
-              window.__pbAcPanicBusy = false;
-            }, 0);
+            /* the guard's own devtools probe logs "[anti-cheat] devtools: ..."
+               every cycle while a debug port is open — that is a measurement,
+               not an accusation. Count it, never panic on it. */
+            if (/devtools:/i.test(s)) {
+              window.__pbAcDevtoolsSeen = (window.__pbAcDevtoolsSeen || 0) + 1;
+            } else {
+              window.__pbAcPanicBusy = true;
+              setTimeout(() => {
+                try { panicNow(); } catch (_) { }
+                window.__pbAcPanicBusy = false;
+              }, 0);
+            }
           }
         } catch (_) { }
         return ow.apply(this, args);

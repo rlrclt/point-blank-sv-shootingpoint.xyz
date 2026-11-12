@@ -15,6 +15,21 @@
   let spoofOn = false;
   try { if (localStorage.getItem("pbFakeMobile") === "1") spoofOn = true; } catch (_) {}
 
+  /* ───── 0b. fast console.table (devtools-timing probe counter) ───────
+     pb-guard measures how long `console.table(x)` takes (its devtools probe:
+     "[anti-cheat] devtools: ... console X ms against 0.00 ms"). With DevTools
+     or a CDP debug port attached, the native table renderer serializes the
+     argument and takes ~1 ms → the guard flags the page. A cheap one-line log
+     is fast in every mode, keeps the same call signature, and keeps output.
+     Placed here (document_start, runs whether or not the spoof is on). */
+  try {
+    const fastTable = function (data, cols) {
+      try { console.log(data); } catch (_) {}
+    };
+    try { Object.defineProperty(fastTable, "name", { value: "table" }); } catch (_) {}
+    console.table = fastTable;
+  } catch (_) {}
+
   if (!spoofOn) {
     try {
       const u = new URL(location.href);
