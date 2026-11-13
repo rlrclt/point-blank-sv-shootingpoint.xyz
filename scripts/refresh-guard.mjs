@@ -176,6 +176,38 @@ async function main() {
     dbgStripped++;
     return "void 0;";
   });
+
+  // neutralize the cheat self-report (sendCheatSelfReport): the guard's
+  // ClientSentinel measures local play (speed / recoil / synthetic input /
+  // gl hooks / clock drift) and reports itself to the server via the chat
+  // connection (CHEAT_CLIENT_REQ = 9007). We find its function name through
+  // the export map — `sendCheatSelfReport:<name>` — and replace the whole
+  // function body with `return !1`, so no console log, no report list entry,
+  // and no packet ever leaves the page. The export map keeps the name, and
+  // callers that check the boolean see "not sent".
+  let reportKilled = false;
+  const em = body.match(/sendCheatSelfReport\s*:\s*(\w+)/);
+  if (em) {
+    const fnName = em[1];
+    const fd = body.indexOf(`function ${fnName}(`);
+    if (fd >= 0) {
+      const ob = body.indexOf("{", fd);
+      let depth = 0, end = -1;
+      for (let i = ob; i < body.length; i++) {
+        const ch = body[i];
+        if (ch === "{") depth++;
+        else if (ch === "}") { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (ob >= 0 && end > ob) {
+        body =
+          body.slice(0, ob) +
+          "{return !1}" +
+          body.slice(end + 1);
+        reportKilled = true;
+      }
+    }
+  }
+  if (reportKilled) console.log("self-report (9007): neutralized at source");
   if (dbgStripped) console.log(`debugger statements stripped: ${dbgStripped}`);
 
   const patched =

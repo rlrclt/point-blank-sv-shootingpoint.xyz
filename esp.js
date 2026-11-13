@@ -75,7 +75,7 @@
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
     sharpWeaponTex: false,
   };
-  const VERSION = "v1.77";
+  const VERSION = "v1.78";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -342,7 +342,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.77</span>
+      <span id="pbTitle">PB ESP v1.78</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
