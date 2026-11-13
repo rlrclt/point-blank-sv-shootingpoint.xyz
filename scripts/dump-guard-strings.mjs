@@ -7,8 +7,12 @@ let src = fs.readFileSync(file, "utf8");
 const e = src.indexOf("export{");
 if (e > 0) src = src.slice(0, e);
 
-// append an in-scope dump hook; detect decoder (g) and its array getter dynamically
-src += "\n;globalThis.__pbDump={ dec: typeof g==='function'?g:null, gsrc: typeof g==='function'?g.toString():null };";
+// detect the decoder's name (it moves between builds: g, L, ...)
+const dm = src.match(/function (\w+)\(\w+(?:,\w+)?\)\{\w+=\w+-\(/);
+const decName = dm ? dm[1] : "g";
+console.log("[decoder]", decName);
+// append an in-scope dump hook; detect decoder and its array getter dynamically
+src += "\n;globalThis.__pbDump={ dec: typeof " + decName + "==='function'?" + decName + ":null, gsrc: typeof " + decName + "==='function'?" + decName + ".toString():null };";
 
 const noop = () => {};
 const sandbox = {
@@ -35,7 +39,7 @@ const strings = [];
 let base = 0;
 let out = "pbrecon/live/guard-strings.txt";
 try {
-  const m = dump.gsrc.match(/r=r-\(([^)]*)\)/);
+  const m = dump.gsrc.match(/\w+=\w+-\(([^)]*)\)/);
   if (m) base = Function("return (" + m[1] + ")")();
   const am = dump.gsrc.match(/const x=(\w+)\(\)/);
   if (am) out = "pbrecon/live/guard-" + am[1] + "-strings.txt";

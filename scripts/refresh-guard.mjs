@@ -6,7 +6,9 @@
  *  2. find the pb-guard-*.js it imports
  *  3. locate the host flag (the `typeof location ... && ...location.hostname`)
  *  4. replace only that declaration with `!0`
- *  5. write guard-patched.js + syntax check it
+ *  5. strip `debugger;` statements (the guard's own devtools-timing probe —
+ *     with a CDP port open the statement pauses the VM and inflates the probe)
+ *  6. write guard-patched.js + syntax check it
  *
  * Usage:
  *   node scripts/refresh-guard.mjs            # fetch, patch, write
@@ -165,11 +167,22 @@ async function main() {
     );
   }
 
+  // strip `debugger;` statements — the guard uses them as a devtools-timing
+  // probe (function pt/pe); with a CDP port attached the statement pauses the
+  // VM and inflates the measured delta. Never inside string literals (the
+  // string table is base64-ish), and count them so the change is visible.
+  let dbgStripped = 0;
+  let body = src.slice(flag.end).replace(/\bdebugger\b\s*;?/g, () => {
+    dbgStripped++;
+    return "void 0;";
+  });
+  if (dbgStripped) console.log(`debugger statements stripped: ${dbgStripped}`);
+
   const patched =
     `/* pb-guard-patched guard=${guard} build=${index} */\n` +
     src.slice(0, flag.eq + 1) +
     "!0" +
-    src.slice(flag.end);
+    body;
 
   const before = exportCount(src);
   const after = exportCount(patched);

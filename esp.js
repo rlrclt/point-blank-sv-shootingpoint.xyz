@@ -75,7 +75,7 @@
     showFps: false, fpsStyle: "box", fpsLabel: true, unlockFps: false, fpsCapMode: "auto",
     sharpWeaponTex: false,
   };
-  const VERSION = "v1.76";
+  const VERSION = "v1.77";
   const DEG = Math.PI / 180;
 
   /* ---------- weighted aim zones ----------
@@ -342,7 +342,7 @@
   const panel = document.createElement("div");
   panel.innerHTML = `
     <div id="pbh">
-      <span id="pbTitle">PB ESP v1.76</span>
+      <span id="pbTitle">PB ESP v1.77</span>
       <span id="pbMasterChip" title="เปิด/ปิด ESP (F8)">ESP ON</span>
       <span id="pbAcChip" title="สถานะ AC shield — คลิกเพื่อไปแท็บ SAFETY">AC</span>
       <span id="pbX">×</span>
@@ -3684,6 +3684,31 @@
   function connListOf(pb) {
     const list = [pb && pb.room && pb.room.game && pb.room.game.conn,
       pb && pb.net && pb.net.room && pb.net.room.game && pb.net.room.game.conn];
+    /* the guard's cheat self-report (CHEAT_CLIENT_REQ = 9007) now travels on
+       the CHAT connection, not the match conn — walk __pb for every
+       connection-like object (send + on + closed/ws/rxMessages) and cover all. */
+    try {
+      const seen = new Set();
+      const stack = [{ o: pb, d: 0 }];
+      while (stack.length) {
+        const { o, d } = stack.pop();
+        if (!o || typeof o !== "object" || d > 5 || seen.has(o)) continue;
+        seen.add(o);
+        if (typeof o.send === "function" && typeof o.on === "function" &&
+            (("closed" in o) || ("rxMessages" in o) || ("ws" in o))) {
+          list.push(o);
+        }
+        if (d < 5) {
+          for (const k of Object.keys(o)) {
+            /* scene/world/camera are huge render trees — conns never live there */
+            if (d === 0 && /^(scene|world|camera|nav|bots|botWork|remotes)$/.test(k)) continue;
+            let v;
+            try { v = o[k]; } catch (_) { continue; }
+            if (v && typeof v === "object" && !(v instanceof Element)) stack.push({ o: v, d: d + 1 });
+          }
+        }
+      }
+    } catch (_) { }
     return list.filter((c, i) => c && list.indexOf(c) === i);
   }
 

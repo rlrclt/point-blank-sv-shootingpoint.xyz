@@ -1,8 +1,10 @@
 // diff-guard-strings.mjs — strings added/removed between two guard builds
 import fs from "node:fs";
+const oldFile = process.argv[2] || "pbrecon/live/guard-Z-strings.txt";
+const newFile = process.argv[3] || "pbrecon/live/guard-V-strings.txt";
 const read = (f) => fs.readFileSync(f, "utf8").split("\n").map((l) => l.slice(l.indexOf("\t") + 1));
-const a = new Set(read("pbrecon/live/guard-Z-strings.txt").filter((s) => s.length >= 3 && s !== "<end>"));
-const b = new Set(read("pbrecon/live/guard-V-strings.txt").filter((s) => s.length >= 3 && s !== "<end>"));
+const a = new Set(read(oldFile).filter((s) => s.length >= 3 && s !== "<end>"));
+const b = new Set(read(newFile).filter((s) => s.length >= 3 && s !== "<end>"));
 const keep = (s) =>
   s.length >= 8 &&
   /[a-z]{3,}/.test(s) &&
